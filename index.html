@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elite 2D - Fuel & Missions</title>
+    <style>
+        body { margin: 0; padding: 0; background: #000; color: #00ffcc; font-family: 'Courier New', monospace; overflow: hidden; width: 100vw; height: 100vh; }
+        canvas { display: block; background: #000; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; padding: 20px; box-sizing: border-box; }
+        .hud-item { margin-bottom: 5px; text-shadow: 0 0 5px #00ffcc; font-weight: bold; }
+        
+        #jump-btn {
+            position: absolute; bottom: 20px; right: 20px; pointer-events: auto;
+            background: transparent; border: 2px solid #ffcc00; color: #ffcc00;
+            padding: 10px 20px; cursor: pointer; font-family: inherit; font-size: 16px;
+        }
+        #jump-btn:hover { background: #ffcc00; color: #000; }
+
+        .modal {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0, 15, 15, 0.98); border: 2px solid #00ffcc;
+            padding: 25px; width: 500px; display: none; pointer-events: auto;
+            box-shadow: 0 0 50px rgba(0, 255, 204, 0.5); z-index: 100;
+        }
+        .modal-header { border-bottom: 1px solid #00ffcc; margin-bottom: 15px; padding-bottom: 10px; text-align: center; }
+        .list-container { max-height: 300px; overflow-y: auto; margin-top: 10px; }
+        .row { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding: 5px; border-bottom: 1px solid #111; }
+        
+        button { background: transparent; border: 1px solid #00ffcc; color: #00ffcc; cursor: pointer; padding: 5px 10px; font-family: inherit; }
+        button:hover { background: #00ffcc; color: #000; }
+        button:disabled { border-color: #333; color: #333; cursor: not-allowed; }
+
+        #msg { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); color: #fff; text-align: center; font-size: 20px; text-shadow: 0 0 10px black; }
+        
+        .tab-btn { cursor: pointer; padding: 5px 10px; border: 1px solid #00ffcc; display: inline-block; margin-right: 5px; opacity: 0.6; }
+        .tab-btn.active { opacity: 1; background: rgba(0,255,204,0.1); }
+        .fuel-bar { height: 10px; background: #333; border: 1px solid #0cf; margin-top: 5px; width: 100px; }
+        .fuel-fill { height: 100%; background: #ffcc00; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="ui-layer">
+    <div id="hud">
+        <div class="hud-item">CREDITS: <span id="cr">1000</span></div>
+        <div class="hud-item">HULL: <span id="hl">100</span>%</div>
+        <div class="hud-item">FUEL: <span id="fl">100</span>%<div class="fuel-bar"><div id="fl-bar" class="fuel-fill" style="width: 100%;"></div></div></div>
+        <div class="hud-item">CARGO: <span id="cg">0/12</span></div>
+        <div class="hud-item" style="color:#ffcc00">SYSTEM: <span id="sys-name">Sol</span></div>
+    </div>
+
+    <div id="msg"></div>
+
+    <button id="jump-btn">GALAXY MAP</button>
+
+    <!-- Station Menu -->
+    <div id="station-modal" class="modal">
+        <div class="modal-header"><h2 id="st-title">STATION</h2></div>
+        <div style="margin-bottom: 15px;">
+            <div class="tab-btn active" id="btn-market">MARKET & FUEL</div>
+            <div class="tab-btn" id="btn-missions">MISSIONS</div>
+            <div class="tab-btn" id="btn-outfit">OUTFIT</div>
+        </div>
+        <div id="modal-body" class="list-container"></div>
+        <button onclick="ui.closeStation()" style="width:100%; margin-top:20px; font-weight:bold;">UNDOCK</button>
+    </div>
+
+    <!-- Galaxy Map -->
+    <div id="nav-modal" class="modal">
+        <div class="modal-header"><h2>GALAXY NAVIGATION</h2></div>
+        <div style="font-size: 12px; margin-bottom: 10px;">Select a system. PREPARE FOR HYPERSPACE CALIBRATION.</div>
+        <div id="nav-body" class="list-container"></div>
+        <button onclick="ui.closeNav()" style="width:100%; margin-top:20px;">CLOSE MAP</button>
+    </div>
+</div>
+
+<script>
+/**
+ * ELITE 2D - FUEL & TRADING ENGINE
+ */
+
+const G = {
+    canvas: null, ctx: null,
+    state: 'FLYING',
+    input: { w:false, s:false, a:false, d:false, space:false, spacePressed:false },
+    ship: { 
+        x:400, y:400, vx:0, vy:0, angle:-1.5, 
+        credits:1000, hull:100, fuel:100, 
+        cargo:{'Food':0, 'Ore':0, 'Crystals':0}, 
+        capacity:12, laser:false, activeMissions: [] 
+    },
+    galaxy: [], 
+    currentSystem: null, targetSystem: null,
+    jump: { progress:0, cursor:0, speed:3, zoneStart:0, zoneWidth:20, dir:1 }
+};
+
+function seededRandom(seed) {
+    let x = Math.sin(seed++) * 10000;
+    return x - Math.floor(x);
+}
+
+function init() {
+    G.canvas = document.getElementById('gameCanvas');
+    G.ctx = G.canvas.getContext('2d');
+    window.addEventListener('resize', resize);
+    resize();
+    window.addEventListener('keydown', e => handleKey(e.code, true));
+    window.addEventListener('keyup', e => handleKey(e.code, false));
+    document.getElementById('jump-btn').onclick = ui.openNav;
+    document.getElementById('btn-market').onclick = () => ui.renderStation('market');
+    document.getElementById('btn-missions').onclick = () => ui.renderStation('missions');
+    document.getElementById('btn-outfit').onclick = () => ui.renderStation('outfit');
+    generateGalaxy();
+    enterSystem(G.galaxy[0]);
+    loop();
+}
+
+function handleKey(code, isDown) {
+    if(code==='KeyW'||code==='ArrowUp') G.input.w = isDown;
+    if(code==='KeyS'||code==='ArrowDown') G.input.s = isDown;
+    if(code==='KeyA'||code==='ArrowLeft') G.input.a = isDown;
+    if(code==='KeyD'||code==='ArrowRight') G.input.d = isDown;
+    if(code==='Space') {
+        if (isDown && !G.input.space) G.input.spacePressed = true;
+        G.input.space = isDown;
+    }
+}
+
+function resize() { G.canvas.width = window.innerWidth; G.canvas.height = window.innerHeight; }
+
+function generateGalaxy() {
+    const names = ["Sol", "Alpha", "Sirius", "Vega", "Rigel", "Deneb", "Altair", "Procyon", "Tau Ceti", "Wolf"];
+    for(let i=0; i<100; i++) {
+        G.galaxy.push({
+            id: i, name: i < names.length ? names[i] : "SYS-" + (1000 + i),
+            x: Math.floor(seededRandom(i*10)*100)-50,
+            y: Math.floor(seededRandom(i*20)*100)-50,
+            seed: i * 1234.56,
+            content: null
+        });
+    }
+}
+
+function enterSystem(sys) {
+    G.currentSystem = sys;
+    if (!sys.content) {
+        let seed = sys.seed;
+        let content = {
+            sun: { r: 80+seededRandom(seed++)*40, color: seededRandom(seed++)>0.5?'#ffcc00':'#ff4400' },
+            planets: [], stations: [], stars: [], missions: []
+        };
+        let pCount = 2 + Math.floor(seededRandom(seed++) * 4);
+        for(let i=0; i<pCount; i++) {
+            let type = seededRandom(seed++) > 0.6 ? 'Icy' : 'Rocky';
+            content.planets.push({
+                x: (seededRandom(seed++)*4000)-2000, y: (seededRandom(seed++)*4000)-2000,
+                r: 40+seededRandom(seed++)*50, type: type, color: type==='Icy'?'#0cf':'#840', name: sys.name+" "+(i+1)
+            });
+        }
+        let sCount = 1 + Math.floor(seededRandom(seed++) * 2);
+        for(let i=0; i<sCount; i++) {
+            content.stations.push({
+                x: (seededRandom(seed++)*2000)-1000, y: (seededRandom(seed++)*2000)-1000,
+                name: sys.name + " Hub " + String.fromCharCode(65+i)
+            });
+        }
+        for(let i=0; i<3; i++) {
+            let targetSysId = Math.floor(seededRandom(seed++) * 100);
+            content.missions.push({
+                id: Math.floor(seededRandom(seed++)*99999), targetId: targetSysId,
+                text: "Deliver Data to " + G.galaxy[targetSysId].name, reward: 200 + Math.floor(seededRandom(seed++) * 500)
+            });
+        }
+        for(let i=0; i<200; i++) content.stars.push({x:seededRandom(seed++)*6000-3000, y:seededRandom(seed++)*6000-3000, s:seededRandom(seed++)*2});
+        sys.content = content;
+    }
+    document.getElementById('sys-name').innerText = sys.name;
+}
+
+function loop() {
+    update();
+    draw();
+    G.input.spacePressed = false;
+    requestAnimationFrame(loop);
+}
+
+function update() {
+    if (G.state === 'JUMP_PREP') {
+        G.jump.cursor += G.jump.speed * G.jump.dir;
+        if (G.jump.cursor > 100 || G.jump.cursor < 0) G.jump.dir *= -1;
+        if (G.input.spacePressed) {
+            if (G.jump.cursor >= G.jump.zoneStart && G.jump.cursor <= (G.jump.zoneStart + G.jump.zoneWidth)) {
+                notify("JUMP CALIBRATED", "#0fc"); G.state = 'JUMPING';
+            } else {
+                notify("NAV ERROR! LOST IN SPACE!", "#f33");
+                G.targetSystem = G.galaxy[Math.floor(Math.random() * 100)];
+                G.state = 'JUMPING';
+            }
+        }
+        return;
+    }
+
+    if (G.state === 'JUMPING') {
+        G.jump.progress += 1.5;
+        if (G.jump.progress >= 100) {
+            enterSystem(G.targetSystem);
+            G.ship.x = 0; G.ship.y = 500; G.ship.vx = 0; G.ship.vy = 0;
+            G.state = 'FLYING';
+        }
+        return;
+    }
+
+    if (G.state === 'FLYING') {
+        if (G.input.a) G.ship.angle -= 0.06;
+        if (G.input.d) G.ship.angle += 0.06;
+        if (G.input.w && G.ship.fuel > 0) {
+            G.ship.vx += Math.cos(G.ship.angle) * 0.16;
+            G.ship.vy += Math.sin(G.ship.angle) * 0.16;
+            G.ship.fuel -= 0.01; // Tiny fuel consumption for sub-light
+        }
+        if (G.input.s) { G.ship.vx *= 0.92; G.ship.vy *= 0.92; }
+        G.ship.x += G.ship.vx; G.ship.y += G.ship.vy;
+        G.ship.vx *= 0.99; G.ship.vy *= 0.99;
+
+        G.currentSystem.content.stations.forEach(s => {
+            if (Math.sqrt((G.ship.x-s.x)**2 + (G.ship.y-s.y)**2) < 50) {
+                if (Math.sqrt(G.ship.vx**2 + G.ship.vy**2) < 2.0) dock(s);
+            }
+        });
+
+        G.currentSystem.content.planets.forEach(p => {
+            if (Math.sqrt((G.ship.x-p.x)**2 + (G.ship.y-p.y)**2) < p.r + 120 && G.ship.laser && G.input.space) {
+                let res = p.type==='Icy'?'Crystals':'Ore';
+                if (Math.random() < 0.02 && getTotalCargo() < G.ship.capacity) {
+                    G.ship.cargo[res]++; notify("+1 "+res, p.color);
+                }
+            }
+        });
+    }
+
+    // UI Updates
+    document.getElementById('cr').innerText = G.ship.credits;
+    document.getElementById('hl').innerText = Math.floor(G.ship.hull);
+    document.getElementById('fl').innerText = Math.floor(G.ship.fuel);
+    document.getElementById('fl-bar').style.width = G.ship.fuel + "%";
+    document.getElementById('cg').innerText = getTotalCargo() + "/" + G.ship.capacity;
+}
+
+function getTotalCargo() { return G.ship.cargo.Food + G.ship.cargo.Ore + G.ship.cargo.Crystals; }
+
+function draw() {
+    const ctx = G.ctx;
+    ctx.clearRect(0,0,G.canvas.width, G.canvas.height);
+    if (G.state === 'JUMP_PREP') { drawMinigame(ctx); return; }
+    if (G.state === 'JUMPING') {
+        ctx.strokeStyle = '#0ff'; ctx.lineWidth = 2;
+        for(let i=0; i<60; i++) {
+            let a = (i/60)*Math.PI*2; let r = (G.jump.progress*25 + i*15)%1500;
+            ctx.beginPath(); ctx.moveTo(G.canvas.width/2+Math.cos(a)*r, G.canvas.height/2+Math.sin(a)*r);
+            ctx.lineTo(G.canvas.width/2+Math.cos(a)*(r+150), G.canvas.height/2+Math.sin(a)*(r+150)); ctx.stroke();
+        }
+        return;
+    }
+
+    ctx.save();
+    ctx.translate(G.canvas.width/2 - G.ship.x, G.canvas.height/2 - G.ship.y);
+    const c = G.currentSystem.content;
+    ctx.fillStyle = '#fff'; c.stars.forEach(s => ctx.fillRect(s.x, s.y, s.s, s.s));
+    ctx.beginPath(); ctx.arc(0,0, c.sun.r, 0, Math.PI*2);
+    ctx.fillStyle = c.sun.color; ctx.shadowBlur = 50; ctx.shadowColor = c.sun.color; ctx.fill(); ctx.shadowBlur = 0;
+    c.planets.forEach(p => {
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fillStyle = p.color; ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.fillText(p.name, p.x-20, p.y-p.r-10);
+    });
+    c.stations.forEach(s => {
+        ctx.strokeStyle = '#f0f'; ctx.lineWidth = 3; ctx.strokeRect(s.x-25, s.y-25, 50, 50);
+        ctx.fillStyle = '#fff'; ctx.fillText(s.name, s.x-30, s.y-40);
+    });
+    if (G.input.space && G.ship.laser && G.state === 'FLYING') {
+        c.planets.forEach(p => {
+            if (Math.sqrt((G.ship.x-p.x)**2 + (G.ship.y-p.y)**2) < p.r+120) {
+                ctx.beginPath(); ctx.moveTo(G.ship.x, G.ship.y); ctx.lineTo(p.x, p.y);
+                ctx.strokeStyle = p.type==='Icy'?'#0cf':'#fc0'; ctx.lineWidth = 4; ctx.stroke();
+            }
+        });
+    }
+    ctx.save(); ctx.translate(G.ship.x, G.ship.y); ctx.rotate(G.ship.angle);
+    ctx.beginPath(); ctx.moveTo(15,0); ctx.lineTo(-10,10); ctx.lineTo(-10,-10); ctx.closePath();
+    ctx.strokeStyle = '#0fc'; ctx.lineWidth = 2; ctx.stroke();
+    if(G.input.w && G.state === 'FLYING') { ctx.beginPath(); ctx.moveTo(-10,0); ctx.lineTo(-25,0); ctx.strokeStyle='#f60'; ctx.stroke(); }
+    if(G.input.s && G.state === 'FLYING') { ctx.beginPath(); ctx.moveTo(5,10); ctx.lineTo(12,14); ctx.moveTo(5,-10); ctx.lineTo(12,-14); ctx.strokeStyle='#0cf'; ctx.stroke(); }
+    ctx.restore();
+    ctx.restore();
+}
+
+function drawMinigame(ctx) {
+    const cx = G.canvas.width/2, cy = G.canvas.height/2;
+    ctx.fillStyle = "rgba(0,0,0,0.9)"; ctx.fillRect(0,0,G.canvas.width, G.canvas.height);
+    ctx.fillStyle = "#fff"; ctx.font = "20px Courier New"; ctx.textAlign = "center";
+    ctx.fillText("HYPERSPACE CALIBRATION", cx, cy - 60);
+    const w = 400, h = 30; ctx.strokeStyle = "#fff"; ctx.strokeRect(cx - w/2, cy, w, h);
+    const zx = (G.jump.zoneStart / 100) * w, zw = (G.jump.zoneWidth / 100) * w;
+    ctx.fillStyle = "#0f0"; ctx.fillRect((cx - w/2) + zx, cy + 2, zw, h - 4);
+    const curX = (G.jump.cursor / 100) * w;
+    ctx.fillStyle = "#f00"; ctx.fillRect((cx - w/2) + curX - 2, cy - 5, 4, h + 10);
+}
+
+function dock(station) {
+    G.state = 'DOCKED'; G.currentStation = station;
+    let comp = [];
+    G.ship.activeMissions = G.ship.activeMissions.filter(m => {
+        if (G.galaxy[m.targetId].name === G.currentSystem.name) {
+            comp.push(m); G.ship.credits += m.reward; return false;
+        }
+        return true;
+    });
+    if (comp.length > 0) notify("MISSION COMPLETE! +" + comp.reduce((a,b)=>a+b.reward,0) + " CR", "lime");
+    ui.openStation();
+}
+
+const ui = {
+    openStation: () => {
+        document.getElementById('st-title').innerText = G.currentStation.name;
+        document.getElementById('station-modal').style.display = 'block'; ui.renderStation('market');
+    },
+    closeStation: () => { G.state = 'FLYING'; document.getElementById('station-modal').style.display = 'none'; G.ship.y += 120; },
+    renderStation: (tab) => {
+        let html = '';
+        const btns = ['btn-market','btn-missions','btn-outfit'];
+        btns.forEach(id => document.getElementById(id).className = id.includes(tab)?'tab-btn active':'tab-btn');
+        if (tab === 'market') {
+            html += `<div class="row"><span><b>Fuel Supply (10 CR/unit)</b></span><div>
+                <button onclick="refuel(10)">+10%</button><button onclick="refuel(100)">MAX</button></div></div>`;
+            html += `<div class="row"><span>Food (20 CR) [Own: ${G.ship.cargo.Food}]</span><div><button onclick="trade('Food',-1)">S</button><button onclick="trade('Food',1)">B</button></div></div>`;
+            html += `<div class="row"><span>Ore (Sell: 80 CR) [Own: ${G.ship.cargo.Ore}]</span><button onclick="trade('Ore',-1)">SELL ALL</button></div>`;
+            html += `<div class="row"><span>Crystals (Sell: 150 CR) [Own: ${G.ship.cargo.Crystals}]</span><button onclick="trade('Crystals',-1)">SELL ALL</button></div>`;
+        } else if (tab === 'missions') {
+            G.currentSystem.content.missions.forEach(m => {
+                html += `<div class="row"><div><b>${m.text}</b><br>Reward: ${m.reward} CR</div><button onclick="acceptMission(${m.id})">ACCEPT</button></div>`;
+            });
+        } else {
+            html += `<div class="row"><span>Mining Laser (500 CR)</span><button onclick="buy('laser')">${G.ship.laser?'OWNED':'BUY'}</button></div>`;
+            html += `<div class="row"><span>Cargo Ext. (800 CR)</span><button onclick="buy('cargo')">+5 CAP</button></div>`;
+        }
+        document.getElementById('modal-body').innerHTML = html;
+    },
+    openNav: () => {
+        if (G.state !== 'FLYING') return;
+        document.getElementById('nav-modal').style.display = 'block';
+        let html = '';
+        const list = G.galaxy.map(s => ({...s, d: Math.sqrt((s.x-G.currentSystem.x)**2+(s.y-G.currentSystem.y)**2)})).sort((a,b)=>a.d-b.d);
+        list.forEach(sys => {
+            if (sys.id === G.currentSystem.id) return;
+            let cost = Math.floor(sys.d * 1.5);
+            html += `<div class="row"><span>${sys.name} (${sys.d.toFixed(1)} LY)</span><button ${G.ship.fuel < cost ? 'disabled':''} onclick="prepJump(${sys.id}, ${cost})">JUMP (${cost} F)</button></div>`;
+        });
+        document.getElementById('nav-body').innerHTML = html;
+    },
+    closeNav: () => document.getElementById('nav-modal').style.display = 'none'
+};
+
+function refuel(amt) {
+    let needed = Math.min(amt, 100 - G.ship.fuel);
+    let cost = Math.ceil(needed * 10);
+    if (G.ship.credits >= cost) { G.ship.credits -= cost; G.ship.fuel += needed; ui.renderStation('market'); }
+    else notify("INSUFFICIENT CREDITS", "red");
+}
+
+function trade(item, amt) {
+    if (item !== 'Food') {
+        if (amt < 0) { G.ship.credits += G.ship.cargo[item] * (item==='Ore'?80:150); G.ship.cargo[item] = 0; }
+    } else {
+        if (amt > 0 && G.ship.credits >= 20 && getTotalCargo() < G.ship.capacity) { G.ship.credits-=20; G.ship.cargo.Food++; }
+        else if (amt < 0 && G.ship.cargo.Food > 0) { G.ship.credits+=20; G.ship.cargo.Food--; }
+    }
+    ui.renderStation('market');
+}
+
+function buy(item) {
+    if (item==='laser' && !G.ship.laser && G.ship.credits>=500) { G.ship.credits-=500; G.ship.laser=true; }
+    if (item==='cargo' && G.ship.credits>=800) { G.ship.credits-=800; G.ship.capacity+=5; }
+    ui.renderStation('outfit');
+}
+
+function acceptMission(id) {
+    let idx = G.currentSystem.content.missions.findIndex(m => m.id === id);
+    if (idx > -1) { G.ship.activeMissions.push(G.currentSystem.content.missions[idx]); G.currentSystem.content.missions.splice(idx, 1); notify("MISSION ACCEPTED", "yellow"); ui.renderStation('missions'); }
+}
+
+function prepJump(id, cost) {
+    G.targetSystem = G.galaxy.find(s => s.id === id); G.ship.fuel -= cost; ui.closeNav();
+    G.state = 'JUMP_PREP'; G.jump.progress = 0; G.jump.cursor = 0; G.jump.speed = 2 + Math.random() * 2; G.jump.zoneStart = 20 + Math.random() * 50; G.jump.zoneWidth = 15;
+}
+
+function notify(t, c='#fff') { let m = document.getElementById('msg'); m.innerText = t; m.style.color = c; setTimeout(() => { if(m.innerText===t) m.innerText=''; }, 3000); }
+
+window.onload = init;
+</script>
+</body>
+</html>
