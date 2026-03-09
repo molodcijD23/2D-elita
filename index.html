@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Courier - Elite 2D</title>
+    <style>
+        /* ============================================
+           GLOBAL STYLES - RETRO SCI-FI AESTHETIC
+           ============================================ */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #000;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #gameCanvas {
+            display: block;
+            background: #000;
+        }
+        
+        /* ============================================
+           HUD - Heads Up Display
+           ============================================ */
+        #hud {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            padding: 15px 20px;
+            background: rgba(0, 10, 20, 0.85);
+            border: 2px solid #0ff;
+            font-size: 14px;
+            min-width: 220px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+        
+        #hud h2 {
+            color: #ff0;
+            margin-bottom: 10px;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+        
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+        }
+        
+        .hud-label { color: #088; }
+        .hud-value { color: #0f0; font-weight: bold; }
+        .hud-value.warning { color: #ff0; }
+        .hud-value.danger { color: #f00; }
+        
+        /* Mission Display */
+        #missionDisplay {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #044;
+            font-size: 12px;
+        }
+        
+        #missionDisplay .mission-title {
+            color: #f0f;
+            margin-bottom: 5px;
+        }
+        
+        #missionDisplay .mission-dest {
+            color: #0ff;
+        }
+        
+        /* ============================================
+           COMPASS (Direction Indicator)
+           ============================================ */
+        #compass {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            width: 100px;
+            height: 100px;
+            border: 2px solid #0ff;
+            border-radius: 50%;
+            background: rgba(0, 10, 20, 0.85);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+        
+        #compassArrow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 40px;
+            background: linear-gradient(to top, transparent, #f0f, #fff);
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%);
+            border-radius: 2px;
+        }
+        
+        #compassCenter {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background: #0ff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        #compassLabel {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #0ff;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        
+        /* ============================================
+           JUMP BUTTON
+           ============================================ */
+        #jumpBtn {
+            position: fixed;
+            top: 180px;
+            right: 15px;
+            padding: 12px 20px;
+            background: rgba(0, 10, 20, 0.9);
+            border: 2px solid #f0f;
+            color: #f0f;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.2);
+        }
+        
+        #jumpBtn:hover:not(:disabled) {
+            background: #f0f;
+            color: #000;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+        }
+        
+        #jumpBtn:disabled {
+            border-color: #333;
+            color: #333;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        /* ============================================
+           JUMP MENU OVERLAY
+           ============================================ */
+        #jumpOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 250;
+        }
+        
+        #jumpMenu {
+            padding: 30px 40px;
+            border: 3px solid #f0f;
+            background: #000;
+            min-width: 450px;
+            box-shadow: 0 0 80px rgba(255, 0, 255, 0.4);
+        }
+        
+        #jumpMenu h1 {
+            text-align: center;
+            color: #f0f;
+            margin-bottom: 10px;
+            font-size: 24px;
+            letter-spacing: 3px;
+        }
+        
+        #jumpMenu .jump-subtitle {
+            text-align: center;
+            color: #088;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+        
+        .jump-fuel-info {
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #044;
+            background: rgba(0, 50, 50, 0.2);
+        }
+        
+        .jump-fuel-info span {
+            color: #0f0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .system-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .system-card {
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #066;
+            background: rgba(0, 30, 30, 0.3);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .system-card:hover:not(.disabled):not(.current) {
+            border-color: #f0f;
+            background: rgba(50, 0, 50, 0.3);
+        }
+        
+        .system-card.current {
+            border-color: #0f0;
+            background: rgba(0, 50, 0, 0.2);
+            cursor: default;
+        }
+        
+        .system-card.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        .system-name {
+            color: #ff0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .system-stations {
+            color: #088;
+            font-size: 11px;
+        }
+        
+        .system-cost {
+            text-align: right;
+        }
+        
+        .system-cost-fuel {
+            color: #f0f;
+            font-size: 14px;
+        }
+        
+        .system-cost-label {
+            color: #066;
+            font-size: 10px;
+        }
+        
+        #cancelJumpBtn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            background: transparent;
+            border: 2px solid #666;
+            color: #666;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        #cancelJumpBtn:hover {
+            border-color: #fff;
+            color: #fff;
+        }
+        
+        /* Jump animation */
+        #jumpEffect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, transparent 0%, #000 100%);
+            display: none;
+            z-index: 300;
+        }
+        
+        .jump-lines {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 100px;
+            background: linear-gradient(to bottom, transparent, #fff, transparent);
+            transform-origin: center top;
+            animation: jumpLine 0.5s ease-out forwards;
+        }
+        
+        @keyframes jumpLine {
+            0% { height: 0; opacity: 1; }
+            100% { height: 300px; opacity: 0; }
+        }
+        
+        /* Edge transition animation */
+        #edgeTransition {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 280;
+            display: none;
+        }
+        
+        #edgeTransition.active {
+            display: block;
+            animation: edgeWarp 0.8s ease-in-out;
+        }
+        
+        #edgeTransition.from-left { background: linear-gradient(to right, #f0f, transparent 50%); }
+        #edgeTransition.from-right { background: linear-gradient(to left, #f0f, transparent 50%); }
+        #edgeTransition.from-top { background: linear-gradient(to bottom, #f0f, transparent 50%); }
+        #edgeTransition.from-bottom { background: linear-gradient(to top, #f0f, transparent 50%); }
+        
+        @keyframes edgeWarp {
+            0% { opacity: 0; transform: scale(1); }
+            30% { opacity: 1; }
+            70% { opacity: 1; }
+            100% { opacity: 0; transform: scale(1.1); }
+        }
+        
+        #edgeTransitionText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            color: #fff;
+            text-shadow: 0 0 30px #f0f, 0 0 60px #f0f;
+            letter-spacing: 5px;
+            animation: transitionTextPulse 0.8s ease-in-out;
+        }
+        
+        @keyframes transitionTextPulse {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* ============================================
+           MINIMAP
+           ============================================ */
+        #minimapContainer {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(0, 10, 20, 0.9);
+            border: 2px solid #0ff;
+            padding: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+        
+        #minimapTitle {
+            color: #0ff;
+            font-size: 10px;
+            text-align: center;
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+        }
+        
+        #minimap {
+            display: block;
+            background: #001;
+            border: 1px solid #044;
+        }
+        
+        #minimapLegend {
+            font-size: 9px;
+            color: #066;
+            margin-top: 5px;
+            text-align: center;
+        }
+        
+        #minimapLegend span {
+            margin: 0 5px;
+        }
+        
+        /* ============================================
+           NAVIGATOR PANEL
+           ============================================ */
+        #navigator {
+            position: fixed;
+            top: 300px;
+            left: 15px;
+            background: rgba(0, 10, 20, 0.85);
+            border: 2px solid #f0f;
+            padding: 12px 15px;
+            min-width: 200px;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.2);
+        }
+        
+        #navigator h3 {
+            color: #f0f;
+            font-size: 11px;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+        
+        #navTarget {
+            color: #ff0;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        #navDistance {
+            color: #0ff;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        #navETA {
+            color: #088;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+        
+        .nav-bar {
+            margin-top: 8px;
+            height: 4px;
+            background: #022;
+            border: 1px solid #044;
+        }
+        
+        .nav-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0ff, #f0f);
+            transition: width 0.3s;
+        }
+        
+        /* ============================================
+           CONTROLS HELP
+           ============================================ */
+        #controls {
+            position: fixed;
+            bottom: 15px;
+            left: 15px;
+            padding: 10px 15px;
+            background: rgba(0, 10, 20, 0.7);
+            border: 1px solid #044;
+            font-size: 11px;
+            color: #066;
+        }
+        
+        #controls b { color: #0ff; }
+        
+        /* ============================================
+           STATUS MESSAGE (Center Screen)
+           ============================================ */
+        #statusMessage {
+            position: fixed;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 50px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #ff0;
+            color: #ff0;
+            font-size: 22px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 0 40px rgba(255, 255, 0, 0.3);
+        }
+        
+        /* ============================================
+           STATION MENU OVERLAY
+           ============================================ */
+        #stationOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 5, 15, 0.97);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        
+        #stationMenu {
+            padding: 30px 40px;
+            border: 3px solid #0ff;
+            background: #000;
+            min-width: 500px;
+            max-width: 600px;
+            box-shadow: 0 0 60px rgba(0, 255, 255, 0.3);
+        }
+        
+        #stationMenu h1 {
+            text-align: center;
+            color: #ff0;
+            margin-bottom: 5px;
+            font-size: 24px;
+            letter-spacing: 3px;
+        }
+        
+        #stationMenu .station-subtitle {
+            text-align: center;
+            color: #088;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+        
+        /* Player Stats in Station */
+        .station-stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #044;
+            background: rgba(0, 50, 50, 0.2);
+        }
+        
+        .station-stat {
+            text-align: center;
+        }
+        
+        .station-stat-label { color: #088; font-size: 11px; }
+        .station-stat-value { color: #0f0; font-size: 20px; font-weight: bold; }
+        
+        /* Mission Board */
+        #missionBoard {
+            margin-bottom: 20px;
+        }
+        
+        #missionBoard h2 {
+            color: #f0f;
+            font-size: 14px;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        
+        .mission-card {
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #066;
+            background: rgba(0, 30, 30, 0.3);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .mission-card:hover {
+            border-color: #0ff;
+            background: rgba(0, 50, 50, 0.4);
+        }
+        
+        .mission-card.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        .mission-card .mission-type {
+            color: #f0f;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .mission-card .mission-desc {
+            color: #0ff;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .mission-card .mission-reward {
+            color: #0f0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .mission-card .mission-distance {
+            color: #088;
+            font-size: 11px;
+            float: right;
+        }
+        
+        /* Current Mission Display */
+        #currentMissionPanel {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #ff0;
+            background: rgba(50, 50, 0, 0.2);
+        }
+        
+        #currentMissionPanel h3 {
+            color: #ff0;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        
+        #currentMissionPanel .cm-dest {
+            color: #0ff;
+            font-size: 14px;
+        }
+        
+        #currentMissionPanel .cm-reward {
+            color: #0f0;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+        
+        .complete-btn {
+            margin-top: 10px;
+            padding: 8px 20px;
+            background: #0f0;
+            border: none;
+            color: #000;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .complete-btn:hover {
+            background: #0a0;
+        }
+        
+        /* Services */
+        .services {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .service-btn {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: 2px solid #066;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .service-btn:hover:not(:disabled) {
+            border-color: #0ff;
+            background: rgba(0, 255, 255, 0.1);
+        }
+        
+        .service-btn:disabled {
+            border-color: #033;
+            color: #033;
+            cursor: not-allowed;
+        }
+        
+        /* Undock Button */
+        #undockBtn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: transparent;
+            border: 3px solid #f0f;
+            color: #f0f;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        #undockBtn:hover {
+            background: #f0f;
+            color: #000;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- HUD -->
+    <div id="hud">
+        <h2>◆ SHIP STATUS ◆</h2>
+        <div class="hud-row">
+            <span class="hud-label">CREDITS</span>
+            <span class="hud-value" id="hudCredits">1000 CR</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">HULL</span>
+            <span class="hud-value" id="hudHull">100%</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">SYSTEM</span>
+            <span class="hud-value" id="hudSystem">ALPHA</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">FUEL</span>
+            <span class="hud-value" id="hudFuel">100%</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">SPEED</span>
+            <span class="hud-value" id="hudSpeed">0</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">POSITION</span>
+            <span class="hud-value" id="hudPos">0, 0</span>
+        </div>
+        <div id="missionDisplay">
+            <div class="mission-title">NO ACTIVE MISSION</div>
+            <div class="mission-dest"></div>
+        </div>
+    </div>
+    
+    <!-- Compass -->
+    <div id="compass">
+        <div id="compassArrow"></div>
+        <div id="compassCenter"></div>
+        <div id="compassLabel">NO TARGET</div>
+    </div>
+    
+    <!-- Minimap -->
+    <div id="minimapContainer">
+        <div id="minimapTitle">◆ NAVIGATION ◆</div>
+        <canvas id="minimap"></canvas>
+        <div id="minimapLegend">
+            <span style="color:#0f0">◆</span> YOU
+            <span style="color:#ff0">◆</span> TARGET
+            <span style="color:#0ff">○</span> STATION
+        </div>
+    </div>
+    
+    <!-- Jump Button -->
+    <button id="jumpBtn">⚡ HYPERJUMP [J]</button>
+    
+    <!-- Navigator Panel -->
+    <div id="navigator">
+        <h3>◆ NAVIGATOR ◆</h3>
+        <div id="navTarget">NO TARGET</div>
+        <div id="navDistance">---</div>
+        <div id="navETA">ETA: ---</div>
+        <div class="nav-bar"><div class="nav-bar-fill" id="navProgress" style="width: 0%"></div></div>
+    </div>
+    
+    <!-- Controls -->
+    <div id="controls">
+        <b>W</b> Thrust | <b>S</b> Brake | <b>A/D</b> Rotate | <b>J</b> Hyperjump | Dock slowly
+    </div>
+    
+    <!-- Status Message -->
+    <div id="statusMessage"></div>
+    
+    <!-- Station Overlay -->
+    <div id="stationOverlay">
+        <div id="stationMenu">
+            <h1 id="menuStationName">STATION</h1>
+            <div class="station-subtitle">CORIOLIS-CLASS OUTPOST</div>
+            
+            <div class="station-stats">
+                <div class="station-stat">
+                    <div class="station-stat-label">CREDITS</div>
+                    <div class="station-stat-value" id="menuCredits">1000</div>
+                </div>
+                <div class="station-stat">
+                    <div class="station-stat-label">FUEL</div>
+                    <div class="station-stat-value" id="menuFuel">100%</div>
+                </div>
+                <div class="station-stat">
+                    <div class="station-stat-label">HULL</div>
+                    <div class="station-stat-value" id="menuHull">100%</div>
+                </div>
+            </div>
+            
+            <div id="currentMissionPanel" style="display: none;">
+                <h3>◆ ACTIVE CONTRACT ◆</h3>
+                <div class="cm-dest" id="cmDest"></div>
+                <div class="cm-reward" id="cmReward"></div>
+                <button class="complete-btn" id="completeMissionBtn" style="display: none;">
+                    COMPLETE DELIVERY
+                </button>
+            </div>
+            
+            <div id="missionBoard">
+                <h2>◆ MISSION BOARD ◆</h2>
+                <div id="missionList"></div>
+            </div>
+            
+            <div class="services">
+                <button class="service-btn" id="refuelBtn">REFUEL<br><span style="color:#088">50 CR</span></button>
+                <button class="service-btn" id="repairBtn">REPAIR<br><span style="color:#088">100 CR</span></button>
+            </div>
+            
+            <button id="undockBtn">◇ UNDOCK ◇</button>
+        </div>
+    </div>
+
+    <!-- Jump Menu Overlay -->
+    <div id="jumpOverlay">
+        <div id="jumpMenu">
+            <h1>◆ HYPERJUMP ◆</h1>
+            <div class="jump-subtitle">SELECT DESTINATION SYSTEM</div>
+            <div class="jump-fuel-info">
+                CURRENT FUEL: <span id="jumpFuelDisplay">100%</span>
+            </div>
+            <div class="system-list" id="systemList"></div>
+            <button id="cancelJumpBtn">CANCEL</button>
+        </div>
+    </div>
+    
+    <!-- Jump Effect -->
+    <div id="jumpEffect"></div>
+    
+    <!-- Edge Transition Effect -->
+    <div id="edgeTransition">
+        <div id="edgeTransitionText"></div>
+    </div>
+
+    <script>
+    // ================================================================
+    // SPACE COURIER - ELITE 2D
+    // A 2D space courier game with realistic flight mechanics
+    // ================================================================
+
+    // ============================================
+    // CONFIGURATION
+    // ============================================
+    const CONFIG = {
+        // World size (massive!)
+        WORLD_WIDTH: 100000,
+        WORLD_HEIGHT: 100000,
+        
+        // Ship physics
+        SHIP_ACCELERATION: 0.8,
+        SHIP_BRAKE_POWER: 0.6,
+        SHIP_MAX_SPEED: 500,
+        SHIP_ROTATION_SPEED: 0.04,
+        SHIP_SIZE: 20,
+        FUEL_CONSUMPTION: 0.015,    // Fuel used per frame when thrusting
+        
+        // Docking
+        DOCK_SPEED_THRESHOLD: 30,
+        BOUNCE_DAMAGE: 15,
+        STATION_RADIUS: 80,
+        
+        // Economy
+        STARTING_CREDITS: 1000,
+        REFUEL_COST: 50,
+        REPAIR_COST: 100,
+        
+        // Minimap
+        MINIMAP_SIZE: 180,
+        MINIMAP_SCALE: 400,  // World units per minimap pixel
+        
+        // Parallax stars
+        STAR_LAYERS: [
+            { count: 300, speed: 0.1, size: 1, alpha: 0.3 },   // Far stars
+            { count: 200, speed: 0.3, size: 1.5, alpha: 0.5 }, // Mid stars
+            { count: 100, speed: 0.6, size: 2, alpha: 0.8 }    // Near stars
+        ],
+        
+        // Jump system
+        JUMP_FUEL_COST_BASE: 25,    // Base fuel cost for hyperjump
+        JUMP_FUEL_MULTIPLIER: 1.5,  // Cost multiplier (25 * 1.5 = 37.5%)
+        EDGE_TRANSITION_MARGIN: 500 // Distance from edge to trigger system transition
+    };
+
+    // ============================================
+    // GAME STATE
+    // ============================================
+    const game = {
+        // All systems (galaxies)
+        systems: [],
+        currentSystemIndex: 0,
+        
+        // Player ship
+        player: {
+            x: CONFIG.WORLD_WIDTH / 2,
+            y: CONFIG.WORLD_HEIGHT / 2,
+            angle: -Math.PI / 2,
+            speed: 0,
+            hull: 100,
+            credits: CONFIG.STARTING_CREDITS,
+            fuel: 100,
+            isDocked: false,
+            dockedStation: null
+        },
+        
+        // Camera (follows player)
+        camera: {
+            x: 0,
+            y: 0
+        },
+        
+        // Current system stations (reference)
+        stations: [],
+        
+        // Current mission
+        mission: null,
+        
+        // Target station for compass
+        targetStation: null,
+        
+        // Star layers for parallax
+        starLayers: [],
+        
+        // Input
+        keys: {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        },
+        
+        // Jump state
+        isJumping: false
+    };
+
+    // ============================================
+    // CANVAS SETUP
+    // ============================================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // ============================================
+    // DOM REFERENCES
+    // ============================================
+    const DOM = {
+        hudCredits: document.getElementById('hudCredits'),
+        hudHull: document.getElementById('hudHull'),
+        hudSystem: document.getElementById('hudSystem'),
+        hudFuel: document.getElementById('hudFuel'),
+        hudSpeed: document.getElementById('hudSpeed'),
+        hudPos: document.getElementById('hudPos'),
+        missionDisplay: document.getElementById('missionDisplay'),
+        compassArrow: document.getElementById('compassArrow'),
+        compassLabel: document.getElementById('compassLabel'),
+        statusMessage: document.getElementById('statusMessage'),
+        stationOverlay: document.getElementById('stationOverlay'),
+        menuStationName: document.getElementById('menuStationName'),
+        menuCredits: document.getElementById('menuCredits'),
+        menuFuel: document.getElementById('menuFuel'),
+        menuHull: document.getElementById('menuHull'),
+        missionList: document.getElementById('missionList'),
+        currentMissionPanel: document.getElementById('currentMissionPanel'),
+        cmDest: document.getElementById('cmDest'),
+        cmReward: document.getElementById('cmReward'),
+        completeMissionBtn: document.getElementById('completeMissionBtn'),
+        refuelBtn: document.getElementById('refuelBtn'),
+        repairBtn: document.getElementById('repairBtn'),
+        undockBtn: document.getElementById('undockBtn'),
+        // Navigator
+        navTarget: document.getElementById('navTarget'),
+        navDistance: document.getElementById('navDistance'),
+        navETA: document.getElementById('navETA'),
+        navProgress: document.getElementById('navProgress'),
+        // Minimap
+        minimap: document.getElementById('minimap'),
+        // Jump menu
+        jumpBtn: document.getElementById('jumpBtn'),
+        jumpOverlay: document.getElementById('jumpOverlay'),
+        jumpFuelDisplay: document.getElementById('jumpFuelDisplay'),
+        systemList: document.getElementById('systemList'),
+        cancelJumpBtn: document.getElementById('cancelJumpBtn'),
+        jumpEffect: document.getElementById('jumpEffect'),
+        // Edge transition
+        edgeTransition: document.getElementById('edgeTransition'),
+        edgeTransitionText: document.getElementById('edgeTransitionText')
+    };
+    
+    // Minimap canvas context
+    const minimapCtx = DOM.minimap.getContext('2d');
+    DOM.minimap.width = CONFIG.MINIMAP_SIZE;
+    DOM.minimap.height = CONFIG.MINIMAP_SIZE;
+
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+    function random(min, max) {
+        return Math.random() * (max - min) + min;
+    }
+
+    function distance(x1, y1, x2, y2) {
+        return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+    }
+
+    function formatDistance(dist) {
+        if (dist >= 1000) {
+            return (dist / 1000).toFixed(1) + ' km';
+        }
+        return Math.round(dist) + ' m';
+    }
+
+    function showStatus(text, duration = 2000) {
+        DOM.statusMessage.textContent = text;
+        DOM.statusMessage.style.display = 'block';
+        setTimeout(() => {
+            DOM.statusMessage.style.display = 'none';
+        }, duration);
+    }
+
+    // ============================================
+    // SYSTEM (GALAXY) GENERATION
+    // ============================================
+    const SYSTEM_NAMES = [
+        { name: 'ALPHA CENTAURI', color: '#0ff' },
+        { name: 'SIRIUS', color: '#ff0' },
+        { name: 'BETELGEUSE', color: '#f80' },
+        { name: 'RIGEL', color: '#08f' },
+        { name: 'VEGA', color: '#f0f' },
+        { name: 'ARCTURUS', color: '#0f0' },
+        { name: 'POLARIS', color: '#fff' },
+        { name: 'ANDROMEDA', color: '#f08' }
+    ];
+
+    function generateAllSystems() {
+        game.systems = SYSTEM_NAMES.map((sys, index) => {
+            const stations = generateStationsForSystem(sys.name, index);
+            const stars = generateStarsForSystem();
+            return {
+                id: index,
+                name: sys.name,
+                color: sys.color,
+                stations: stations,
+                starLayers: stars,
+                discovered: index === 0  // Only first system is discovered initially
+            };
+        });
+        
+        // Set current system
+        switchToSystem(0);
+    }
+
+    function generateStationsForSystem(systemName, systemIndex) {
+        const stationPrefixes = ['ALPHA', 'BETA', 'GAMMA', 'DELTA', 'EPSILON'];
+        const margin = 5000;
+        const w = CONFIG.WORLD_WIDTH;
+        const h = CONFIG.WORLD_HEIGHT;
+        
+        // Different layouts per system
+        const layouts = [
+            // Layout 0: corners + center
+            [{ x: 0.15, y: 0.15 }, { x: 0.85, y: 0.15 }, { x: 0.5, y: 0.5 }, { x: 0.15, y: 0.85 }, { x: 0.85, y: 0.85 }],
+            // Layout 1: cross pattern
+            [{ x: 0.5, y: 0.15 }, { x: 0.15, y: 0.5 }, { x: 0.5, y: 0.5 }, { x: 0.85, y: 0.5 }, { x: 0.5, y: 0.85 }],
+            // Layout 2: diagonal
+            [{ x: 0.2, y: 0.2 }, { x: 0.4, y: 0.4 }, { x: 0.5, y: 0.5 }, { x: 0.6, y: 0.6 }, { x: 0.8, y: 0.8 }],
+            // Layout 3: ring
+            [{ x: 0.5, y: 0.2 }, { x: 0.8, y: 0.4 }, { x: 0.7, y: 0.75 }, { x: 0.3, y: 0.75 }, { x: 0.2, y: 0.4 }],
+        ];
+        
+        const layout = layouts[systemIndex % layouts.length];
+        const stationCount = 3 + Math.floor(Math.random() * 3); // 3-5 stations
+        
+        const stations = [];
+        for (let i = 0; i < Math.min(stationCount, layout.length); i++) {
+            const pos = layout[i];
+            stations.push({
+                id: i,
+                systemId: systemIndex,
+                name: stationPrefixes[i] + ' ' + systemName.split(' ')[0],
+                x: pos.x * w + random(-3000, 3000),
+                y: pos.y * h + random(-3000, 3000),
+                color: ['#f0f', '#0ff', '#ff0', '#0f0', '#f80'][i]
+            });
+        }
+        
+        return stations;
+    }
+
+    function generateStarsForSystem() {
+        return CONFIG.STAR_LAYERS.map(layer => {
+            const stars = [];
+            for (let i = 0; i < layer.count; i++) {
+                stars.push({
+                    x: random(0, CONFIG.WORLD_WIDTH),
+                    y: random(0, CONFIG.WORLD_HEIGHT),
+                    size: layer.size + random(-0.5, 0.5),
+                    alpha: layer.alpha
+                });
+            }
+            return { ...layer, stars };
+        });
+    }
+
+    function switchToSystem(systemIndex) {
+        const system = game.systems[systemIndex];
+        game.currentSystemIndex = systemIndex;
+        game.stations = system.stations;
+        game.starLayers = system.starLayers;
+        system.discovered = true;
+        
+        // Update target if mission exists
+        if (game.mission) {
+            if (game.mission.systemId === systemIndex) {
+                game.targetStation = game.stations.find(s => s.id === game.mission.destinationId);
+            } else {
+                game.targetStation = null; // Target is in another system
+            }
+        } else if (game.stations.length > 0) {
+            game.targetStation = game.stations[0];
+        }
+    }
+
+    // ============================================
+    // INITIALIZATION (Modified)
+    // ============================================
+    function generateStations() {
+        // Now handled by generateAllSystems
+    }
+
+    function generateStars() {
+        // Now handled by system generation
+    }
+
+    function generateMissionsForStation(station) {
+        const missions = [];
+        const currentSystem = game.systems[game.currentSystemIndex];
+        
+        // Local missions (same system)
+        const otherStations = game.stations.filter(s => s.id !== station.id);
+        for (let i = 0; i < 2; i++) {
+            if (otherStations.length === 0) break;
+            const dest = otherStations[Math.floor(Math.random() * otherStations.length)];
+            const dist = distance(station.x, station.y, dest.x, dest.y);
+            const reward = Math.round(100 + dist / 100 + random(0, 200));
+            
+            const types = ['Secure Data', 'Medical Supplies', 'VIP Passenger', 'Rare Minerals', 'Tech Components'];
+            
+            missions.push({
+                type: types[Math.floor(Math.random() * types.length)],
+                destinationId: dest.id,
+                destinationName: dest.name,
+                systemId: game.currentSystemIndex,
+                systemName: currentSystem.name,
+                reward: reward,
+                distance: dist,
+                isInterstellar: false
+            });
+        }
+        
+        // Interstellar missions (other systems) - higher rewards
+        const otherSystems = game.systems.filter((s, i) => i !== game.currentSystemIndex);
+        for (let i = 0; i < 2; i++) {
+            const destSystem = otherSystems[Math.floor(Math.random() * otherSystems.length)];
+            const destStation = destSystem.stations[Math.floor(Math.random() * destSystem.stations.length)];
+            const baseReward = 500 + Math.floor(random(200, 800));
+            
+            const types = ['CLASSIFIED DATA', 'DIPLOMATIC PACKAGE', 'RARE ARTIFACT', 'EMERGENCY MEDICAL'];
+            
+            missions.push({
+                type: types[Math.floor(Math.random() * types.length)],
+                destinationId: destStation.id,
+                destinationName: destStation.name,
+                systemId: destSystem.id,
+                systemName: destSystem.name,
+                reward: baseReward,
+                distance: null,  // Interstellar - no simple distance
+                isInterstellar: true
+            });
+        }
+        
+        return missions;
+    }
+
+    // ============================================
+    // INPUT HANDLING
+    // ============================================
+    window.addEventListener('keydown', (e) => {
+        if (game.player.isDocked) return;
+        
+        switch(e.key.toLowerCase()) {
+            case 'w': case 'arrowup': game.keys.up = true; e.preventDefault(); break;
+            case 's': case 'arrowdown': game.keys.down = true; e.preventDefault(); break;
+            case 'a': case 'arrowleft': game.keys.left = true; e.preventDefault(); break;
+            case 'd': case 'arrowright': game.keys.right = true; e.preventDefault(); break;
+            case 'j': 
+                if (!game.player.isDocked && !game.isJumping) {
+                    openJumpMenu();
+                }
+                e.preventDefault(); 
+                break;
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        switch(e.key.toLowerCase()) {
+            case 'w': case 'arrowup': game.keys.up = false; break;
+            case 's': case 'arrowdown': game.keys.down = false; break;
+            case 'a': case 'arrowleft': game.keys.left = false; break;
+            case 'd': case 'arrowright': game.keys.right = false; break;
+            case 'escape': closeJumpMenu(); break;
+        }
+    });
+
+    // ============================================
+    // PHYSICS UPDATE
+    // ============================================
+    function updatePhysics() {
+        const p = game.player;
+        if (p.isDocked) return;
+        
+        // Rotation
+        if (game.keys.left) p.angle -= CONFIG.SHIP_ROTATION_SPEED;
+        if (game.keys.right) p.angle += CONFIG.SHIP_ROTATION_SPEED;
+        
+        // Acceleration (increases speed in facing direction) - requires fuel
+        if (game.keys.up && p.fuel > 0) {
+            p.speed += CONFIG.SHIP_ACCELERATION;
+            p.fuel -= CONFIG.FUEL_CONSUMPTION;
+            if (p.fuel < 0) p.fuel = 0;
+        }
+        
+        // Braking (decreases speed) - also uses some fuel
+        if (game.keys.down && p.fuel > 0) {
+            p.speed -= CONFIG.SHIP_BRAKE_POWER;
+            p.fuel -= CONFIG.FUEL_CONSUMPTION * 0.5;
+            if (p.fuel < 0) p.fuel = 0;
+        }
+        
+        // Clamp speed
+        p.speed = Math.max(0, Math.min(p.speed, CONFIG.SHIP_MAX_SPEED));
+        
+        // Natural deceleration (very slight)
+        if (!game.keys.up && !game.keys.down) {
+            p.speed *= 0.998;
+        }
+        
+        // Move in facing direction (NO LATERAL DRIFT!)
+        // Velocity is always aligned with ship's facing angle
+        p.x += Math.cos(p.angle) * p.speed;
+        p.y += Math.sin(p.angle) * p.speed;
+        
+        // World bounds - EDGE TRANSITION TO ADJACENT SYSTEM
+        const margin = CONFIG.EDGE_TRANSITION_MARGIN;
+        let transitioned = false;
+        
+        if (p.x < margin) {
+            // Left edge - go to previous system
+            transitionToAdjacentSystem(-1, 'left');
+            transitioned = true;
+        } else if (p.x > CONFIG.WORLD_WIDTH - margin) {
+            // Right edge - go to next system
+            transitionToAdjacentSystem(1, 'right');
+            transitioned = true;
+        } else if (p.y < margin) {
+            // Top edge
+            transitionToAdjacentSystem(-2, 'top');
+            transitioned = true;
+        } else if (p.y > CONFIG.WORLD_HEIGHT - margin) {
+            // Bottom edge
+            transitionToAdjacentSystem(2, 'bottom');
+            transitioned = true;
+        }
+        
+        if (!transitioned) {
+            p.x = Math.max(margin, Math.min(p.x, CONFIG.WORLD_WIDTH - margin));
+            p.y = Math.max(margin, Math.min(p.y, CONFIG.WORLD_HEIGHT - margin));
+        }
+    }
+    
+    function transitionToAdjacentSystem(offset, edge) {
+        const totalSystems = game.systems.length;
+        let newIndex = (game.currentSystemIndex + offset + totalSystems) % totalSystems;
+        
+        const p = game.player;
+        const targetSystem = game.systems[newIndex];
+        
+        // Play edge transition animation
+        const transEl = DOM.edgeTransition;
+        const textEl = DOM.edgeTransitionText;
+        
+        // Remove old classes
+        transEl.className = '';
+        
+        // Add direction class
+        transEl.classList.add('from-' + edge);
+        transEl.classList.add('active');
+        textEl.textContent = '◆ ' + targetSystem.name + ' ◆';
+        
+        // Remove animation after completion
+        setTimeout(() => {
+            transEl.classList.remove('active');
+        }, 800);
+        
+        // Switch system
+        switchToSystem(newIndex);
+        
+        // Reposition player on opposite edge
+        switch(edge) {
+            case 'left':
+                p.x = CONFIG.WORLD_WIDTH - CONFIG.EDGE_TRANSITION_MARGIN - 100;
+                break;
+            case 'right':
+                p.x = CONFIG.EDGE_TRANSITION_MARGIN + 100;
+                break;
+            case 'top':
+                p.y = CONFIG.WORLD_HEIGHT - CONFIG.EDGE_TRANSITION_MARGIN - 100;
+                break;
+            case 'bottom':
+                p.y = CONFIG.EDGE_TRANSITION_MARGIN + 100;
+                break;
+        }
+    }
+
+    // ============================================
+    // HYPERJUMP SYSTEM
+    // ============================================
+    function getJumpCost(targetSystemIndex) {
+        // Base cost * 1.5 multiplier
+        return Math.round(CONFIG.JUMP_FUEL_COST_BASE * CONFIG.JUMP_FUEL_MULTIPLIER);
+    }
+    
+    function openJumpMenu() {
+        if (game.player.isDocked) return;
+        
+        DOM.jumpFuelDisplay.textContent = Math.round(game.player.fuel) + '%';
+        
+        // Generate system list
+        let html = '';
+        game.systems.forEach((system, index) => {
+            const isCurrent = index === game.currentSystemIndex;
+            const cost = getJumpCost(index);
+            const canAfford = game.player.fuel >= cost;
+            const isDisabled = !canAfford && !isCurrent;
+            
+            let statusClass = '';
+            if (isCurrent) statusClass = 'current';
+            else if (isDisabled) statusClass = 'disabled';
+            
+            const missionHere = game.mission && game.mission.systemId === index;
+            
+            html += `
+                <div class="system-card ${statusClass}" data-index="${index}" ${isDisabled ? '' : ''}>
+                    <div>
+                        <div class="system-name" style="color: ${system.color}">
+                            ${missionHere ? '◆ ' : ''}${system.name}
+                        </div>
+                        <div class="system-stations">
+                            ${system.stations.length} stations
+                            ${system.discovered ? '' : ' • UNDISCOVERED'}
+                            ${missionHere ? ' • MISSION TARGET' : ''}
+                        </div>
+                    </div>
+                    <div class="system-cost">
+                        ${isCurrent 
+                            ? '<span style="color:#0f0">CURRENT</span>' 
+                            : `<div class="system-cost-fuel">${cost}% FUEL</div>
+                               <div class="system-cost-label">${canAfford ? 'READY' : 'LOW FUEL'}</div>`
+                        }
+                    </div>
+                </div>
+            `;
+        });
+        
+        DOM.systemList.innerHTML = html;
+        
+        // Add click handlers
+        document.querySelectorAll('.system-card:not(.current):not(.disabled)').forEach(card => {
+            card.addEventListener('click', () => {
+                const targetIndex = parseInt(card.dataset.index);
+                executeJump(targetIndex);
+            });
+        });
+        
+        DOM.jumpOverlay.style.display = 'flex';
+    }
+    
+    function closeJumpMenu() {
+        DOM.jumpOverlay.style.display = 'none';
+    }
+    
+    function executeJump(targetSystemIndex) {
+        const cost = getJumpCost(targetSystemIndex);
+        if (game.player.fuel < cost) return;
+        
+        game.isJumping = true;
+        game.player.fuel -= cost;
+        closeJumpMenu();
+        
+        // Jump animation
+        DOM.jumpEffect.style.display = 'block';
+        DOM.jumpEffect.innerHTML = '';
+        
+        // Create jump lines
+        for (let i = 0; i < 50; i++) {
+            const line = document.createElement('div');
+            line.className = 'jump-lines';
+            line.style.transform = `rotate(${i * 7.2}deg)`;
+            line.style.animationDelay = `${Math.random() * 0.3}s`;
+            DOM.jumpEffect.appendChild(line);
+        }
+        
+        showStatus('⚡ HYPERJUMP TO ' + game.systems[targetSystemIndex].name, 1500);
+        
+        setTimeout(() => {
+            // Switch system
+            switchToSystem(targetSystemIndex);
+            
+            // Reposition player in center
+            game.player.x = CONFIG.WORLD_WIDTH / 2 + random(-5000, 5000);
+            game.player.y = CONFIG.WORLD_HEIGHT / 2 + random(-5000, 5000);
+            game.player.speed = 0;
+            
+            DOM.jumpEffect.style.display = 'none';
+            game.isJumping = false;
+            
+            showStatus('ARRIVED IN ' + game.systems[targetSystemIndex].name, 2000);
+        }, 1500);
+    }
+    
+    // Jump button click
+    DOM.jumpBtn.addEventListener('click', () => {
+        if (!game.player.isDocked && !game.isJumping) {
+            openJumpMenu();
+        }
+    });
+    
+    DOM.cancelJumpBtn.addEventListener('click', closeJumpMenu);
+
+    // ============================================
+    // COLLISION DETECTION
+    // ============================================
+    function checkCollisions() {
+        const p = game.player;
+        if (p.isDocked) return;
+        
+        for (const station of game.stations) {
+            const dist = distance(p.x, p.y, station.x, station.y);
+            
+            if (dist < CONFIG.STATION_RADIUS + CONFIG.SHIP_SIZE) {
+                if (p.speed <= CONFIG.DOCK_SPEED_THRESHOLD) {
+                    // Successful dock!
+                    dock(station);
+                } else {
+                    // Collision! Bounce and damage
+                    const damage = Math.min(CONFIG.BOUNCE_DAMAGE, CONFIG.BOUNCE_DAMAGE * (p.speed / 100));
+                    p.hull -= damage;
+                    p.speed *= -0.3; // Bounce back
+                    
+                    // Push away from station
+                    const angle = Math.atan2(p.y - station.y, p.x - station.x);
+                    p.x = station.x + Math.cos(angle) * (CONFIG.STATION_RADIUS + CONFIG.SHIP_SIZE + 10);
+                    p.y = station.y + Math.sin(angle) * (CONFIG.STATION_RADIUS + CONFIG.SHIP_SIZE + 10);
+                    
+                    showStatus('⚠ COLLISION! Hull damage!');
+                    
+                    if (p.hull <= 0) {
+                        gameOver();
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    function gameOver() {
+        showStatus('💀 SHIP DESTROYED - Resetting...', 3000);
+        setTimeout(() => {
+            game.player.x = CONFIG.WORLD_WIDTH / 2;
+            game.player.y = CONFIG.WORLD_HEIGHT / 2;
+            game.player.speed = 0;
+            game.player.hull = 100;
+            game.player.credits = CONFIG.STARTING_CREDITS;
+            game.mission = null;
+        }, 3000);
+    }
+
+    // ============================================
+    // DOCKING SYSTEM
+    // ============================================
+    function dock(station) {
+        game.player.isDocked = true;
+        game.player.dockedStation = station;
+        game.player.speed = 0;
+        game.player.x = station.x;
+        game.player.y = station.y;
+        
+        showStatus('DOCKED AT ' + station.name);
+        setTimeout(() => openStationMenu(station), 500);
+    }
+
+    function undock() {
+        const station = game.player.dockedStation;
+        const angle = random(0, Math.PI * 2);
+        const dist = CONFIG.STATION_RADIUS + CONFIG.SHIP_SIZE + 50;
+        
+        game.player.x = station.x + Math.cos(angle) * dist;
+        game.player.y = station.y + Math.sin(angle) * dist;
+        game.player.angle = angle;
+        game.player.isDocked = false;
+        game.player.dockedStation = null;
+        
+        closeStationMenu();
+        showStatus('UNDOCKED');
+    }
+
+    // ============================================
+    // STATION MENU
+    // ============================================
+    function openStationMenu(station) {
+        DOM.menuStationName.textContent = station.name;
+        DOM.menuCredits.textContent = game.player.credits + ' CR';
+        DOM.menuFuel.textContent = Math.round(game.player.fuel) + '%';
+        DOM.menuHull.textContent = Math.round(game.player.hull) + '%';
+        
+        // Generate missions
+        const missions = generateMissionsForStation(station);
+        renderMissionBoard(missions, station);
+        
+        // Show current mission panel if we have one
+        if (game.mission) {
+            DOM.currentMissionPanel.style.display = 'block';
+            const inRightSystem = game.mission.systemId === game.currentSystemIndex;
+            DOM.cmDest.textContent = 'Deliver to: ' + game.mission.destinationName + 
+                (inRightSystem ? '' : ' [' + game.mission.systemName + ']');
+            DOM.cmReward.textContent = 'Reward: ' + game.mission.reward + ' CR';
+            
+            // Check if we're at the destination
+            if (inRightSystem && game.mission.destinationId === station.id) {
+                DOM.completeMissionBtn.style.display = 'block';
+            } else {
+                DOM.completeMissionBtn.style.display = 'none';
+            }
+        } else {
+            DOM.currentMissionPanel.style.display = 'none';
+        }
+        
+        // Update service buttons
+        DOM.refuelBtn.disabled = game.player.credits < CONFIG.REFUEL_COST || game.player.fuel >= 100;
+        DOM.repairBtn.disabled = game.player.credits < CONFIG.REPAIR_COST || game.player.hull >= 100;
+        
+        // Update button text with current state
+        DOM.refuelBtn.innerHTML = game.player.fuel >= 100 
+            ? 'FUEL FULL<br><span style="color:#0f0">100%</span>'
+            : `REFUEL<br><span style="color:#088">${CONFIG.REFUEL_COST} CR</span>`;
+        DOM.repairBtn.innerHTML = game.player.hull >= 100
+            ? 'HULL OK<br><span style="color:#0f0">100%</span>'
+            : `REPAIR<br><span style="color:#088">${CONFIG.REPAIR_COST} CR</span>`;
+        
+        DOM.stationOverlay.style.display = 'flex';
+    }
+
+    function closeStationMenu() {
+        DOM.stationOverlay.style.display = 'none';
+    }
+
+    function renderMissionBoard(missions, currentStation) {
+        const hasMission = game.mission !== null;
+        
+        DOM.missionList.innerHTML = missions.map((m, i) => `
+            <div class="mission-card ${hasMission ? 'disabled' : ''}" data-index="${i}">
+                <div class="mission-type">${m.isInterstellar ? '★ ' : '◆ '}${m.type.toUpperCase()}</div>
+                <div class="mission-desc">Deliver to ${m.destinationName}${m.isInterstellar ? ' [' + m.systemName + ']' : ''}</div>
+                <span class="mission-reward">${m.reward} CR</span>
+                <span class="mission-distance">${m.isInterstellar ? 'INTERSTELLAR' : formatDistance(m.distance)}</span>
+            </div>
+        `).join('');
+        
+        // Add click handlers
+        if (!hasMission) {
+            document.querySelectorAll('.mission-card').forEach((card, i) => {
+                card.addEventListener('click', () => acceptMission(missions[i]));
+            });
+        }
+    }
+
+    function acceptMission(mission) {
+        if (game.mission) return;
+        
+        game.mission = mission;
+        
+        // Set target station if in same system
+        if (mission.systemId === game.currentSystemIndex) {
+            game.targetStation = game.stations.find(s => s.id === mission.destinationId);
+        } else {
+            game.targetStation = null; // Will need to jump first
+        }
+        
+        showStatus('CONTRACT ACCEPTED: ' + mission.type);
+        closeStationMenu();
+        undock();
+    }
+
+    function completeMission() {
+        if (!game.mission) return;
+        
+        // Check if we're in the right system and at the right station
+        if (game.mission.systemId !== game.currentSystemIndex) {
+            showStatus('Wrong system! Jump to ' + game.mission.systemName, 2000);
+            return;
+        }
+        
+        game.player.credits += game.mission.reward;
+        showStatus('✓ DELIVERY COMPLETE! +' + game.mission.reward + ' CR', 2500);
+        game.mission = null;
+        game.targetStation = game.stations[0];
+        
+        // Update menu
+        DOM.currentMissionPanel.style.display = 'none';
+        DOM.menuCredits.textContent = game.player.credits + ' CR';
+        
+        // Regenerate mission board
+        const missions = generateMissionsForStation(game.player.dockedStation);
+        renderMissionBoard(missions, game.player.dockedStation);
+    }
+
+    // Service buttons
+    DOM.refuelBtn.addEventListener('click', () => {
+        if (game.player.credits >= CONFIG.REFUEL_COST && game.player.fuel < 100) {
+            game.player.credits -= CONFIG.REFUEL_COST;
+            game.player.fuel = 100;
+            DOM.menuCredits.textContent = game.player.credits + ' CR';
+            DOM.menuFuel.textContent = '100%';
+            DOM.refuelBtn.disabled = true;
+            DOM.refuelBtn.innerHTML = 'FUEL FULL<br><span style="color:#0f0">100%</span>';
+            showStatus('REFUELED', 1000);
+        }
+    });
+
+    DOM.repairBtn.addEventListener('click', () => {
+        if (game.player.credits >= CONFIG.REPAIR_COST && game.player.hull < 100) {
+            game.player.credits -= CONFIG.REPAIR_COST;
+            game.player.hull = 100;
+            DOM.menuCredits.textContent = game.player.credits + ' CR';
+            DOM.menuHull.textContent = '100%';
+            DOM.repairBtn.disabled = true;
+            DOM.repairBtn.innerHTML = 'HULL OK<br><span style="color:#0f0">100%</span>';
+            showStatus('REPAIRED', 1000);
+        }
+    });
+
+    DOM.undockBtn.addEventListener('click', undock);
+    DOM.completeMissionBtn.addEventListener('click', completeMission);
+
+    // ============================================
+    // CAMERA UPDATE
+    // ============================================
+    function updateCamera() {
+        game.camera.x = game.player.x - canvas.width / 2;
+        game.camera.y = game.player.y - canvas.height / 2;
+    }
+
+    // ============================================
+    // RENDERING
+    // ============================================
+    function render() {
+        // Clear
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw parallax stars
+        renderStars();
+        
+        // Draw stations
+        renderStations();
+        
+        // Draw player
+        if (!game.player.isDocked) {
+            renderPlayer();
+        }
+    }
+
+    function renderStars() {
+        game.starLayers.forEach(layer => {
+            ctx.fillStyle = `rgba(255, 255, 255, ${layer.alpha})`;
+            
+            layer.stars.forEach(star => {
+                // Parallax offset based on camera and layer speed
+                let screenX = star.x - game.camera.x * layer.speed;
+                let screenY = star.y - game.camera.y * layer.speed;
+                
+                // Wrap stars for infinite effect
+                screenX = ((screenX % canvas.width) + canvas.width) % canvas.width;
+                screenY = ((screenY % canvas.height) + canvas.height) % canvas.height;
+                
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        });
+    }
+
+    function renderStations() {
+        game.stations.forEach(station => {
+            const screenX = station.x - game.camera.x;
+            const screenY = station.y - game.camera.y;
+            
+            // Skip if off-screen (with margin)
+            if (screenX < -200 || screenX > canvas.width + 200 ||
+                screenY < -200 || screenY > canvas.height + 200) {
+                return;
+            }
+            
+            const r = CONFIG.STATION_RADIUS;
+            
+            // Outer ring
+            ctx.strokeStyle = station.color;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, r, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Inner hexagon
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 3) * i;
+                const hx = screenX + Math.cos(angle) * (r * 0.6);
+                const hy = screenY + Math.sin(angle) * (r * 0.6);
+                if (i === 0) ctx.moveTo(hx, hy);
+                else ctx.lineTo(hx, hy);
+            }
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Center dot
+            ctx.fillStyle = station.color;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Station name
+            ctx.fillStyle = station.color;
+            ctx.font = '12px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText(station.name, screenX, screenY - r - 15);
+            
+            // Docking indicator when close
+            const dist = distance(game.player.x, game.player.y, station.x, station.y);
+            if (dist < r * 4 && !game.player.isDocked) {
+                const pulse = (Math.sin(Date.now() / 200) + 1) / 2;
+                const isSafe = game.player.speed <= CONFIG.DOCK_SPEED_THRESHOLD;
+                
+                ctx.strokeStyle = isSafe 
+                    ? `rgba(0, 255, 0, ${0.3 + pulse * 0.5})` 
+                    : `rgba(255, 0, 0, ${0.3 + pulse * 0.5})`;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, r + 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Speed warning text
+                ctx.fillStyle = isSafe ? '#0f0' : '#f00';
+                ctx.font = '11px Courier New';
+                ctx.fillText(isSafe ? 'DOCK READY' : 'TOO FAST!', screenX, screenY + r + 30);
+            }
+        });
+    }
+
+    function renderPlayer() {
+        const p = game.player;
+        const screenX = p.x - game.camera.x;
+        const screenY = p.y - game.camera.y;
+        const size = CONFIG.SHIP_SIZE;
+        
+        ctx.save();
+        ctx.translate(screenX, screenY);
+        ctx.rotate(p.angle);
+        
+        // Ship body
+        ctx.fillStyle = 'rgba(0, 255, 100, 0.3)';
+        ctx.strokeStyle = '#0f0';
+        ctx.lineWidth = 2;
+        
+        ctx.beginPath();
+        ctx.moveTo(size, 0);                      // Nose
+        ctx.lineTo(-size * 0.7, -size * 0.7);    // Left wing
+        ctx.lineTo(-size * 0.3, 0);               // Back center
+        ctx.lineTo(-size * 0.7, size * 0.7);     // Right wing
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Engine glow when accelerating
+        if (game.keys.up && game.player.fuel > 0) {
+            const flameLen = size * 0.6 + Math.random() * size * 0.4;
+            ctx.fillStyle = '#f80';
+            ctx.beginPath();
+            ctx.moveTo(-size * 0.3, -size * 0.25);
+            ctx.lineTo(-size * 0.3 - flameLen, 0);
+            ctx.lineTo(-size * 0.3, size * 0.25);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Brake glow
+        if (game.keys.down && game.player.fuel > 0) {
+            ctx.fillStyle = '#08f';
+            ctx.beginPath();
+            ctx.arc(size * 0.3, 0, 4 + Math.random() * 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+
+    // ============================================
+    // MINIMAP RENDERING
+    // ============================================
+    function renderMinimap() {
+        const p = game.player;
+        const size = CONFIG.MINIMAP_SIZE;
+        const scale = CONFIG.MINIMAP_SCALE;
+        const halfSize = size / 2;
+        
+        // Clear minimap
+        minimapCtx.fillStyle = '#001';
+        minimapCtx.fillRect(0, 0, size, size);
+        
+        // Draw grid
+        minimapCtx.strokeStyle = '#033';
+        minimapCtx.lineWidth = 1;
+        for (let i = 0; i <= size; i += 30) {
+            minimapCtx.beginPath();
+            minimapCtx.moveTo(i, 0);
+            minimapCtx.lineTo(i, size);
+            minimapCtx.moveTo(0, i);
+            minimapCtx.lineTo(size, i);
+            minimapCtx.stroke();
+        }
+        
+        // Draw stations
+        game.stations.forEach(station => {
+            const dx = (station.x - p.x) / scale;
+            const dy = (station.y - p.y) / scale;
+            const sx = halfSize + dx;
+            const sy = halfSize + dy;
+            
+            // Only draw if within minimap bounds
+            if (sx >= 0 && sx <= size && sy >= 0 && sy <= size) {
+                // Check if this is the target station
+                const isTarget = game.targetStation && game.targetStation.id === station.id;
+                
+                minimapCtx.fillStyle = isTarget ? '#ff0' : station.color;
+                minimapCtx.strokeStyle = isTarget ? '#ff0' : station.color;
+                minimapCtx.lineWidth = isTarget ? 2 : 1;
+                
+                // Station marker
+                minimapCtx.beginPath();
+                minimapCtx.arc(sx, sy, isTarget ? 5 : 4, 0, Math.PI * 2);
+                if (isTarget) {
+                    minimapCtx.fill();
+                    // Pulsing ring for target
+                    const pulse = (Math.sin(Date.now() / 200) + 1) / 2;
+                    minimapCtx.strokeStyle = `rgba(255, 255, 0, ${0.3 + pulse * 0.7})`;
+                    minimapCtx.beginPath();
+                    minimapCtx.arc(sx, sy, 8 + pulse * 4, 0, Math.PI * 2);
+                }
+                minimapCtx.stroke();
+            } else {
+                // Draw edge indicator for off-map stations
+                const angle = Math.atan2(dy, dx);
+                const edgeX = halfSize + Math.cos(angle) * (halfSize - 8);
+                const edgeY = halfSize + Math.sin(angle) * (halfSize - 8);
+                
+                const isTarget = game.targetStation && game.targetStation.id === station.id;
+                minimapCtx.fillStyle = isTarget ? '#ff0' : '#088';
+                
+                // Small triangle pointing to station
+                minimapCtx.save();
+                minimapCtx.translate(edgeX, edgeY);
+                minimapCtx.rotate(angle);
+                minimapCtx.beginPath();
+                minimapCtx.moveTo(6, 0);
+                minimapCtx.lineTo(-3, -4);
+                minimapCtx.lineTo(-3, 4);
+                minimapCtx.closePath();
+                minimapCtx.fill();
+                minimapCtx.restore();
+            }
+        });
+        
+        // Draw interstellar mission indicator (if mission is in another system)
+        if (game.mission && game.mission.systemId !== game.currentSystemIndex) {
+            // Draw pulsing indicator in corner showing mission is elsewhere
+            const pulse = (Math.sin(Date.now() / 300) + 1) / 2;
+            
+            // Top right corner indicator
+            minimapCtx.fillStyle = `rgba(255, 0, 255, ${0.5 + pulse * 0.5})`;
+            minimapCtx.strokeStyle = `rgba(255, 0, 255, ${0.3 + pulse * 0.7})`;
+            minimapCtx.lineWidth = 2;
+            
+            // Diamond shape
+            const cx = size - 15;
+            const cy = 15;
+            const s = 6 + pulse * 2;
+            
+            minimapCtx.beginPath();
+            minimapCtx.moveTo(cx, cy - s);
+            minimapCtx.lineTo(cx + s, cy);
+            minimapCtx.lineTo(cx, cy + s);
+            minimapCtx.lineTo(cx - s, cy);
+            minimapCtx.closePath();
+            minimapCtx.fill();
+            minimapCtx.stroke();
+            
+            // Text
+            minimapCtx.fillStyle = '#f0f';
+            minimapCtx.font = '8px Courier New';
+            minimapCtx.textAlign = 'right';
+            minimapCtx.fillText('⚡' + game.mission.systemName.substring(0, 6), size - 5, 30);
+        }
+        
+        // Draw player (always center)
+        minimapCtx.save();
+        minimapCtx.translate(halfSize, halfSize);
+        minimapCtx.rotate(p.angle);
+        
+        minimapCtx.fillStyle = '#0f0';
+        minimapCtx.beginPath();
+        minimapCtx.moveTo(6, 0);
+        minimapCtx.lineTo(-4, -4);
+        minimapCtx.lineTo(-2, 0);
+        minimapCtx.lineTo(-4, 4);
+        minimapCtx.closePath();
+        minimapCtx.fill();
+        
+        minimapCtx.restore();
+        
+        // Draw border
+        minimapCtx.strokeStyle = '#0ff';
+        minimapCtx.lineWidth = 2;
+        minimapCtx.strokeRect(0, 0, size, size);
+    }
+
+    // ============================================
+    // NAVIGATOR UPDATE
+    // ============================================
+    function updateNavigator() {
+        const p = game.player;
+        
+        // Check if mission target is in different system
+        if (game.mission && game.mission.systemId !== game.currentSystemIndex) {
+            DOM.navTarget.textContent = '⚡ JUMP TO ' + game.mission.systemName;
+            DOM.navTarget.style.color = '#f0f';
+            DOM.navDistance.textContent = 'INTERSTELLAR';
+            DOM.navETA.textContent = 'Press J to hyperjump';
+            DOM.navProgress.style.width = '0%';
+            return;
+        }
+        
+        if (!game.targetStation) {
+            DOM.navTarget.textContent = 'NO TARGET';
+            DOM.navTarget.style.color = '#666';
+            DOM.navDistance.textContent = '---';
+            DOM.navETA.textContent = 'ETA: ---';
+            DOM.navProgress.style.width = '0%';
+            return;
+        }
+        
+        const t = game.targetStation;
+        const dist = distance(p.x, p.y, t.x, t.y);
+        
+        DOM.navTarget.textContent = '→ ' + t.name;
+        DOM.navTarget.style.color = '#ff0';
+        DOM.navDistance.textContent = formatDistance(dist);
+        
+        if (p.speed > 1) {
+            const etaSeconds = dist / p.speed / 60;
+            if (etaSeconds < 60) {
+                DOM.navETA.textContent = 'ETA: ' + Math.ceil(etaSeconds) + 's';
+            } else {
+                DOM.navETA.textContent = 'ETA: ' + Math.ceil(etaSeconds / 60) + 'm ' + Math.ceil(etaSeconds % 60) + 's';
+            }
+        } else {
+            DOM.navETA.textContent = 'ETA: STOPPED';
+        }
+        
+        const maxDist = Math.sqrt(CONFIG.WORLD_WIDTH ** 2 + CONFIG.WORLD_HEIGHT ** 2);
+        const progress = Math.max(0, Math.min(100, 100 - (dist / maxDist * 100)));
+        DOM.navProgress.style.width = progress + '%';
+    }
+
+    // ============================================
+    // HUD UPDATE
+    // ============================================
+    function updateHUD() {
+        const p = game.player;
+        
+        // Basic stats
+        DOM.hudCredits.textContent = p.credits + ' CR';
+        DOM.hudHull.textContent = Math.round(p.hull) + '%';
+        DOM.hudSystem.textContent = game.systems[game.currentSystemIndex].name;
+        DOM.hudFuel.textContent = Math.round(p.fuel) + '%';
+        DOM.hudSpeed.textContent = Math.round(p.speed);
+        DOM.hudPos.textContent = Math.round(p.x / 100) + ', ' + Math.round(p.y / 100);
+        
+        // Hull color
+        DOM.hudHull.className = 'hud-value' + 
+            (p.hull < 30 ? ' danger' : p.hull < 60 ? ' warning' : '');
+        
+        // Fuel color
+        DOM.hudFuel.className = 'hud-value' + 
+            (p.fuel < 20 ? ' danger' : p.fuel < 40 ? ' warning' : '');
+        
+        // Speed color
+        DOM.hudSpeed.className = 'hud-value' + 
+            (p.speed > CONFIG.DOCK_SPEED_THRESHOLD ? ' warning' : '');
+        
+        // Mission display
+        if (game.mission) {
+            const inRightSystem = game.mission.systemId === game.currentSystemIndex;
+            DOM.missionDisplay.innerHTML = `
+                <div class="mission-title">◆ ${game.mission.type.toUpperCase()}</div>
+                <div class="mission-dest">→ ${game.mission.destinationName}${inRightSystem ? '' : '<br><span style="color:#f0f">[JUMP TO ' + game.mission.systemName + ']</span>'}</div>
+            `;
+        } else {
+            DOM.missionDisplay.innerHTML = `
+                <div class="mission-title">NO ACTIVE MISSION</div>
+                <div class="mission-dest" style="color:#066">Dock at a station for contracts</div>
+            `;
+        }
+        
+        // Jump button state
+        DOM.jumpBtn.disabled = game.player.isDocked || game.isJumping || game.player.fuel < getJumpCost(0);
+        
+        // Compass
+        updateCompass();
+    }
+
+    function updateCompass() {
+        if (!game.targetStation) {
+            DOM.compassLabel.textContent = 'NO TARGET';
+            DOM.compassArrow.style.opacity = '0.2';
+            return;
+        }
+        
+        const p = game.player;
+        const t = game.targetStation;
+        
+        // Angle to target
+        const angleToTarget = Math.atan2(t.y - p.y, t.x - p.x);
+        const angleDeg = (angleToTarget * 180 / Math.PI) + 90; // CSS rotation offset
+        
+        DOM.compassArrow.style.transform = `translate(-50%, -100%) rotate(${angleDeg}deg)`;
+        DOM.compassArrow.style.opacity = '1';
+        
+        // Distance
+        const dist = distance(p.x, p.y, t.x, t.y);
+        DOM.compassLabel.textContent = t.name + ' ' + formatDistance(dist);
+    }
+
+    // ============================================
+    // GAME LOOP
+    // ============================================
+    function gameLoop() {
+        updatePhysics();
+        checkCollisions();
+        updateCamera();
+        render();
+        renderMinimap();
+        updateHUD();
+        updateNavigator();
+        
+        requestAnimationFrame(gameLoop);
+    }
+
+    // ============================================
+    // START GAME
+    // ============================================
+    function init() {
+        console.log('🚀 SPACE COURIER - Starting...');
+        console.log('Systems:', SYSTEM_NAMES.length);
+        
+        // Generate all systems
+        generateAllSystems();
+        
+        // Start near center station of first system
+        if (game.stations.length > 0) {
+            const centerStation = game.stations.find(s => s.x > CONFIG.WORLD_WIDTH * 0.4 && s.x < CONFIG.WORLD_WIDTH * 0.6);
+            if (centerStation) {
+                game.player.x = centerStation.x + 500;
+                game.player.y = centerStation.y;
+            } else {
+                game.player.x = game.stations[0].x + 500;
+                game.player.y = game.stations[0].y;
+            }
+        }
+        
+        showStatus('SPACE COURIER - Press J to open Hyperjump menu!', 3000);
+        
+        gameLoop();
+    }
+
+    init();
+    </script>
+</body>
+</html>
