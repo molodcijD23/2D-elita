@@ -663,6 +663,161 @@
             cursor: not-allowed;
         }
         
+        /* Upgrades Board */
+        #upgradeBoard {
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        #upgradeBoard h2 {
+            color: #0ff;
+            font-size: 14px;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        
+        .upgrade-card {
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #066;
+            background: rgba(0, 30, 30, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .upgrade-card:hover:not(.maxed) {
+            border-color: #0ff;
+            background: rgba(0, 50, 50, 0.4);
+        }
+        
+        .upgrade-info { flex: 1; }
+        .upgrade-name { color: #fff; font-size: 14px; font-weight: bold; }
+        .upgrade-desc { color: #088; font-size: 11px; margin-top: 2px; }
+        .upgrade-buy {
+            padding: 8px 15px;
+            background: #0ff;
+            border: none;
+            color: #000;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            min-width: 100px;
+            text-align: center;
+        }
+        
+        .upgrade-buy:hover:not(:disabled) { background: #0aa; }
+        .upgrade-buy:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .upgrade-buy.maxed { background: #0f0; color: #000; cursor: default; }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #044;
+            padding-bottom: 10px;
+        }
+        
+        .tab-btn {
+            padding: 8px 15px;
+            background: transparent;
+            border: 1px solid #066;
+            color: #088;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+        }
+        
+        .tab-btn.active {
+            border-color: #0ff;
+            color: #0ff;
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        /* Market Styles */
+        #marketBoard, #marketBrowser {
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .market-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr 1.2fr;
+            gap: 5px;
+            border-bottom: 1px solid #044;
+            padding: 8px 0;
+            font-size: 11px;
+            color: #088;
+        }
+        
+        .market-header {
+            font-weight: bold;
+            color: #0ff;
+            border-bottom: 2px solid #066;
+            margin-bottom: 10px;
+        }
+        
+        .market-row {
+            padding: 10px 0;
+            border-bottom: 1px solid #022;
+            align-items: center;
+        }
+        
+        .market-row:hover { background: rgba(0, 255, 255, 0.05); }
+        
+        .item-name { color: #fff; font-weight: bold; }
+        .item-price { color: #ff0; }
+        .item-stock { color: #0f0; }
+        
+        .market-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .market-btn {
+            padding: 4px 8px;
+            border: 1px solid #066;
+            background: transparent;
+            color: #0ff;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+        }
+        
+        .market-btn:hover:not(:disabled) { background: #066; color: #fff; }
+        .market-btn:disabled { color: #333; border-color: #222; cursor: not-allowed; }
+
+        /* Browser Styles */
+        .browser-station-row {
+            margin-bottom: 15px;
+            border: 1px solid #044;
+            padding: 10px;
+        }
+        
+        .browser-station-name {
+            color: #ff0;
+            font-size: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Inventory display in HUD or Menu */
+        .cargo-info {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #066;
+            background: rgba(0, 30, 30, 0.4);
+        }
+        
+        .cargo-bar {
+            height: 6px;
+            background: #022;
+            margin-top: 5px;
+            border: 1px solid #044;
+        }
+        
+        .cargo-bar-fill { height: 100%; background: #0f0; transition: width 0.3s; }
+
         /* Undock Button */
         #undockBtn {
             display: block;
@@ -790,9 +945,46 @@
                 </button>
             </div>
             
+            <div class="tab-buttons">
+                <button class="tab-btn active" id="missionTabBtn">MISSIONS</button>
+                <button class="tab-btn" id="marketTabBtn">MARKET</button>
+                <button class="tab-btn" id="browserTabBtn">BROWSER</button>
+                <button class="tab-btn" id="upgradeTabBtn">UPGRADES</button>
+            </div>
+
             <div id="missionBoard">
                 <h2>◆ MISSION BOARD ◆</h2>
                 <div id="missionList"></div>
+            </div>
+
+            <div id="marketBoard">
+                <h2>◆ COMMODITY MARKET ◆</h2>
+                <div class="cargo-info">
+                    <div style="display:flex; justify-content:space-between; font-size:11px;">
+                        <span>CARGO BAY</span>
+                        <span id="cargoStatus">0 / 20 units</span>
+                    </div>
+                    <div class="cargo-bar"><div class="cargo-bar-fill" id="cargoBarFill" style="width: 0%"></div></div>
+                </div>
+                <div class="market-grid market-header" style="margin-top:15px;">
+                    <span>ITEM</span>
+                    <span>BUY</span>
+                    <span>SELL</span>
+                    <span>STOCK</span>
+                    <span>ACTION</span>
+                </div>
+                <div id="marketList"></div>
+            </div>
+
+            <div id="marketBrowser">
+                <h2>◆ INTERSTELLAR MARKET BROWSER ◆</h2>
+                <div class="jump-subtitle">Real-time data from discovered systems</div>
+                <div id="browserList" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+
+            <div id="upgradeBoard">
+                <h2>◆ SHIP UPGRADES ◆</h2>
+                <div id="upgradeList"></div>
             </div>
             
             <div class="services">
@@ -875,6 +1067,50 @@
     };
 
     // ============================================
+    // COMMODITIES & MARKET CONFIG
+    // ============================================
+    const COMMODITIES = [
+        { id: 'food', name: 'Food Cartridges', basePrice: 15, category: 'Basic' },
+        { id: 'water', name: 'Purified Water', basePrice: 8, category: 'Basic' },
+        { id: 'minerals', name: 'Industrial Minerals', basePrice: 65, category: 'Industrial' },
+        { id: 'chemicals', name: 'Reactive Chemicals', basePrice: 120, category: 'Industrial' },
+        { id: 'tech', name: 'Consumer Tech', basePrice: 450, category: 'Technology' },
+        { id: 'weapons', name: 'Defense Small Arms', basePrice: 900, category: 'Military' },
+        { id: 'artifacts', name: 'Ancient Artifacts', basePrice: 2500, category: 'Rare' },
+        { id: 'relics', name: 'Alien Relics', basePrice: 6000, category: 'Rare' }
+    ];
+
+    // ============================================
+    // UPGRADES CONFIGURATION
+    // ============================================
+    const UPGRADES_CONFIG = {
+        engine: [
+            { name: 'Standard Thrusters', cost: 0, accel: 0.8, speed: 500, desc: 'Factory default propulsion' },
+            { name: 'Mark II Engines', cost: 800, accel: 1.2, speed: 650, desc: 'Improved thrust-to-weight ratio' },
+            { name: 'Fusion Core Mk III', cost: 2500, accel: 1.7, speed: 850, desc: 'High-energy particle acceleration' },
+            { name: 'Quantum Drive MK IV', cost: 7000, accel: 2.5, speed: 1200, desc: 'Experimental spatial distortion' }
+        ],
+        hull: [
+            { name: 'Cargo Shell', cost: 0, max: 100, desc: 'Thin titanium-alloy hull' },
+            { name: 'Reinforced Plating', cost: 600, max: 150, desc: 'Double-layered ceramic plates' },
+            { name: 'Composite Armor', cost: 2000, max: 250, desc: 'Multi-layered impact resistant materials' },
+            { name: 'Titanium Lattice Hull', cost: 6000, max: 500, desc: 'Deep-space grade structural reinforcement' }
+        ],
+        fuel: [
+            { name: 'Standard Tank', cost: 0, max: 100, desc: 'Standard liquid fuel container' },
+            { name: 'Extended Cells', cost: 500, max: 150, desc: 'Optimized internal storage volume' },
+            { name: 'Hydrogen Storage Mk II', cost: 1500, max: 250, desc: 'Cryogenic fuel compression' },
+            { name: 'Antimatter Core Tank', cost: 5000, max: 500, desc: 'Infinite-range focused containment' }
+        ],
+        cargo: [
+            { name: 'Small Hold', cost: 0, max: 20, desc: 'Basic internal storage' },
+            { name: 'Expanded Bay', cost: 400, max: 50, desc: 'Optimized cargo rack system' },
+            { name: 'Heavy Freighter Hold', cost: 1200, max: 120, desc: 'Industrial grade volume expansion' },
+            { name: 'Compressed Spatial Hold', cost: 4500, max: 300, desc: 'Non-euclidean storage technology' }
+        ]
+    };
+
+    // ============================================
     // GAME STATE
     // ============================================
     const game = {
@@ -892,7 +1128,16 @@
             credits: CONFIG.STARTING_CREDITS,
             fuel: 100,
             isDocked: false,
-            dockedStation: null
+            dockedStation: null,
+            // Track upgrade levels
+            upgrades: {
+                engine: 0,
+                hull: 0,
+                fuel: 0,
+                cargo: 0
+            },
+            // Ship inventory: { itemId: quantity }
+            inventory: {}
         },
         
         // Camera (follows player)
@@ -965,6 +1210,19 @@
         refuelBtn: document.getElementById('refuelBtn'),
         repairBtn: document.getElementById('repairBtn'),
         undockBtn: document.getElementById('undockBtn'),
+        missionTabBtn: document.getElementById('missionTabBtn'),
+        marketTabBtn: document.getElementById('marketTabBtn'),
+        browserTabBtn: document.getElementById('browserTabBtn'),
+        upgradeTabBtn: document.getElementById('upgradeTabBtn'),
+        missionBoard: document.getElementById('missionBoard'),
+        marketBoard: document.getElementById('marketBoard'),
+        marketList: document.getElementById('marketList'),
+        marketBrowser: document.getElementById('marketBrowser'),
+        browserList: document.getElementById('browserList'),
+        cargoStatus: document.getElementById('cargoStatus'),
+        cargoBarFill: document.getElementById('cargoBarFill'),
+        upgradeBoard: document.getElementById('upgradeBoard'),
+        upgradeList: document.getElementById('upgradeList'),
         // Navigator
         navTarget: document.getElementById('navTarget'),
         navDistance: document.getElementById('navDistance'),
@@ -1006,6 +1264,111 @@
         }
         return Math.round(dist) + ' m';
     }
+
+    function getMaxHull() {
+        return UPGRADES_CONFIG.hull[game.player.upgrades.hull].max;
+    }
+
+    function getMaxFuel() {
+        return UPGRADES_CONFIG.fuel[game.player.upgrades.fuel].max;
+    }
+
+    function getMaxCargo() {
+        return UPGRADES_CONFIG.cargo[game.player.upgrades.cargo].max;
+    }
+
+    function getCurrentCargoLoad() {
+        let total = 0;
+        for (const id in game.player.inventory) {
+            total += game.player.inventory[id];
+        }
+        return total;
+    }
+
+    function getAcceleration() {
+        return UPGRADES_CONFIG.engine[game.player.upgrades.engine].accel;
+    }
+
+    function getMaxSpeed() {
+        return UPGRADES_CONFIG.engine[game.player.upgrades.engine].speed;
+    }
+
+    // ============================================
+    // MARKET LOGIC
+    // ============================================
+    function generateMarketForStation(systemIndex, stationId) {
+        const market = {};
+        COMMODITIES.forEach(item => {
+            // Price variation based on station and system seed
+            const seed = systemIndex * 10 + stationId;
+            const variation = (Math.sin(seed * item.basePrice) + 1) / 2; // 0 to 1
+            
+            // Buy price: base +/- 30%
+            const buyPrice = Math.round(item.basePrice * (0.7 + variation * 0.6));
+            // Sell price: usually lower than buy (90%)
+            const sellPrice = Math.round(buyPrice * 0.85);
+            // Stock variation
+            const stock = Math.floor(variation * 50) + (item.category === 'Basic' ? 20 : 5);
+            
+            market[item.id] = {
+                buyPrice,
+                sellPrice,
+                stock
+            };
+        });
+        return market;
+    }
+
+    function buyItem(itemId) {
+        const station = game.player.dockedStation;
+        const marketItem = station.market[itemId];
+        const itemConfig = COMMODITIES.find(c => c.id === itemId);
+        
+        if (marketItem.stock > 0 && 
+            game.player.credits >= marketItem.buyPrice && 
+            getCurrentCargoLoad() < getMaxCargo()) {
+            
+            game.player.credits -= marketItem.buyPrice;
+            marketItem.stock--;
+            game.player.inventory[itemId] = (game.player.inventory[itemId] || 0) + 1;
+            
+            showStatus('PURCHASED: ' + itemConfig.name);
+            updateStationMenuStats();
+            renderMarketBoard();
+        }
+    }
+
+    function sellItem(itemId) {
+        const station = game.player.dockedStation;
+        const marketItem = station.market[itemId];
+        const itemConfig = COMMODITIES.find(c => c.id === itemId);
+        
+        if (game.player.inventory[itemId] > 0) {
+            game.player.credits += marketItem.sellPrice;
+            marketItem.stock++;
+            game.player.inventory[itemId]--;
+            
+            if (game.player.inventory[itemId] === 0) {
+                delete game.player.inventory[itemId];
+            }
+            
+            showStatus('SOLD: ' + itemConfig.name);
+            updateStationMenuStats();
+            renderMarketBoard();
+        }
+    }
+
+    function updateStationMenuStats() {
+        DOM.menuCredits.textContent = game.player.credits + ' CR';
+        const load = getCurrentCargoLoad();
+        const max = getMaxCargo();
+        DOM.cargoStatus.textContent = `${load} / ${max} units`;
+        DOM.cargoBarFill.style.width = (load / max * 100) + '%';
+    }
+
+    // Expose to global for onclick
+    window.buyItem = buyItem;
+    window.sellItem = sellItem;
 
     function showStatus(text, duration = 2000) {
         DOM.statusMessage.textContent = text;
@@ -1077,7 +1440,8 @@
                 name: stationPrefixes[i] + ' ' + systemName.split(' ')[0],
                 x: pos.x * w + random(-3000, 3000),
                 y: pos.y * h + random(-3000, 3000),
-                color: ['#f0f', '#0ff', '#ff0', '#0f0', '#f80'][i]
+                color: ['#f0f', '#0ff', '#ff0', '#0f0', '#f80'][i],
+                market: generateMarketForStation(systemIndex, i)
             });
         }
         
@@ -1222,7 +1586,7 @@
         
         // Acceleration (increases speed in facing direction) - requires fuel
         if (game.keys.up && p.fuel > 0) {
-            p.speed += CONFIG.SHIP_ACCELERATION;
+            p.speed += getAcceleration();
             p.fuel -= CONFIG.FUEL_CONSUMPTION;
             if (p.fuel < 0) p.fuel = 0;
         }
@@ -1235,7 +1599,7 @@
         }
         
         // Clamp speed
-        p.speed = Math.max(0, Math.min(p.speed, CONFIG.SHIP_MAX_SPEED));
+        p.speed = Math.max(0, Math.min(p.speed, getMaxSpeed()));
         
         // Natural deceleration (very slight)
         if (!game.keys.up && !game.keys.down) {
@@ -1330,7 +1694,7 @@
     function openJumpMenu() {
         if (game.player.isDocked) return;
         
-        DOM.jumpFuelDisplay.textContent = Math.round(game.player.fuel) + '%';
+        DOM.jumpFuelDisplay.textContent = Math.round(game.player.fuel / getMaxFuel() * 100) + '%';
         
         // Generate system list
         let html = '';
@@ -1361,7 +1725,7 @@
                     <div class="system-cost">
                         ${isCurrent 
                             ? '<span style="color:#0f0">CURRENT</span>' 
-                            : `<div class="system-cost-fuel">${cost}% FUEL</div>
+                            : `<div class="system-cost-fuel">${cost} FUEL</div>
                                <div class="system-cost-label">${canAfford ? 'READY' : 'LOW FUEL'}</div>`
                         }
                     </div>
@@ -1476,7 +1840,7 @@
             game.player.x = CONFIG.WORLD_WIDTH / 2;
             game.player.y = CONFIG.WORLD_HEIGHT / 2;
             game.player.speed = 0;
-            game.player.hull = 100;
+            game.player.hull = getMaxHull();
             game.player.credits = CONFIG.STARTING_CREDITS;
             game.mission = null;
         }, 3000);
@@ -1517,12 +1881,21 @@
     function openStationMenu(station) {
         DOM.menuStationName.textContent = station.name;
         DOM.menuCredits.textContent = game.player.credits + ' CR';
-        DOM.menuFuel.textContent = Math.round(game.player.fuel) + '%';
-        DOM.menuHull.textContent = Math.round(game.player.hull) + '%';
+        DOM.menuFuel.textContent = Math.round(game.player.fuel / getMaxFuel() * 100) + '%';
+        DOM.menuHull.textContent = Math.round(game.player.hull / getMaxHull() * 100) + '%';
+        
+        // Update cargo display
+        updateStationMenuStats();
+        
+        // Reset to missions tab
+        switchTab('mission');
         
         // Generate missions
         const missions = generateMissionsForStation(station);
         renderMissionBoard(missions, station);
+        
+        // Render upgrades
+        renderUpgradeBoard();
         
         // Show current mission panel if we have one
         if (game.mission) {
@@ -1543,14 +1916,16 @@
         }
         
         // Update service buttons
-        DOM.refuelBtn.disabled = game.player.credits < CONFIG.REFUEL_COST || game.player.fuel >= 100;
-        DOM.repairBtn.disabled = game.player.credits < CONFIG.REPAIR_COST || game.player.hull >= 100;
+        const maxFuel = getMaxFuel();
+        const maxHull = getMaxHull();
+        DOM.refuelBtn.disabled = game.player.credits < CONFIG.REFUEL_COST || game.player.fuel >= maxFuel;
+        DOM.repairBtn.disabled = game.player.credits < CONFIG.REPAIR_COST || game.player.hull >= maxHull;
         
         // Update button text with current state
-        DOM.refuelBtn.innerHTML = game.player.fuel >= 100 
+        DOM.refuelBtn.innerHTML = game.player.fuel >= maxFuel 
             ? 'FUEL FULL<br><span style="color:#0f0">100%</span>'
             : `REFUEL<br><span style="color:#088">${CONFIG.REFUEL_COST} CR</span>`;
-        DOM.repairBtn.innerHTML = game.player.hull >= 100
+        DOM.repairBtn.innerHTML = game.player.hull >= maxHull
             ? 'HULL OK<br><span style="color:#0f0">100%</span>'
             : `REPAIR<br><span style="color:#088">${CONFIG.REPAIR_COST} CR</span>`;
         
@@ -1559,6 +1934,104 @@
 
     function closeStationMenu() {
         DOM.stationOverlay.style.display = 'none';
+    }
+
+    function switchTab(tab) {
+        // Reset all tabs
+        const tabs = ['mission', 'market', 'browser', 'upgrade'];
+        tabs.forEach(t => {
+            const btn = DOM[t + 'TabBtn'];
+            const board = DOM[t + 'Board'] || DOM['market' + t.charAt(0).toUpperCase() + t.slice(1)];
+            if (btn) btn.classList.remove('active');
+            if (board) board.style.display = 'none';
+        });
+
+        // Activate selected
+        if (tab === 'mission') {
+            DOM.missionTabBtn.classList.add('active');
+            DOM.missionBoard.style.display = 'block';
+        } else if (tab === 'market') {
+            DOM.marketTabBtn.classList.add('active');
+            DOM.marketBoard.style.display = 'block';
+            renderMarketBoard();
+        } else if (tab === 'browser') {
+            DOM.browserTabBtn.classList.add('active');
+            DOM.marketBrowser.style.display = 'block';
+            renderMarketBrowser();
+        } else if (tab === 'upgrade') {
+            DOM.upgradeTabBtn.classList.add('active');
+            DOM.upgradeBoard.style.display = 'block';
+            renderUpgradeBoard();
+        }
+    }
+
+    function renderMarketBoard() {
+        const station = game.player.dockedStation;
+        if (!station) return;
+        
+        DOM.marketList.innerHTML = COMMODITIES.map(item => {
+            const marketItem = station.market[item.id];
+            const playerQty = game.player.inventory[item.id] || 0;
+            const canBuy = marketItem.stock > 0 && game.player.credits >= marketItem.buyPrice && getCurrentCargoLoad() < getMaxCargo();
+            const canSell = playerQty > 0;
+            
+            return `
+                <div class="market-grid market-row">
+                    <div class="item-info">
+                        <div class="item-name">${item.name}</div>
+                        <div style="font-size:9px; color:#066">${item.category} • Own: ${playerQty}</div>
+                    </div>
+                    <div class="item-price">${marketItem.buyPrice}</div>
+                    <div class="item-price">${marketItem.sellPrice}</div>
+                    <div class="item-stock">${marketItem.stock}</div>
+                    <div class="market-actions">
+                        <button class="market-btn" ${canBuy ? '' : 'disabled'} onclick="buyItem('${item.id}')">BUY</button>
+                        <button class="market-btn" ${canSell ? '' : 'disabled'} onclick="sellItem('${item.id}')">SELL</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderMarketBrowser() {
+        let html = '';
+        
+        // Only show discovered systems
+        game.systems.filter(sys => sys.discovered).forEach(sys => {
+            sys.stations.forEach(station => {
+                const isCurrent = station.id === game.player.dockedStation?.id && sys.id === game.currentSystemIndex;
+                
+                html += `
+                    <div class="browser-station-row">
+                        <div class="browser-station-name">
+                            <span>${station.name} (${sys.name})</span>
+                            <span style="color:#088; font-size:10px">${isCurrent ? 'LOCAL' : 'REMOTE'}</span>
+                        </div>
+                        <div class="market-grid market-header">
+                            <span>ITEM</span>
+                            <span>BUY</span>
+                            <span>SELL</span>
+                            <span>STOCK</span>
+                            <span></span>
+                        </div>
+                        ${COMMODITIES.slice(0, 4).map(item => {
+                            const mi = station.market[item.id];
+                            return `
+                                <div class="market-grid" style="font-size:10px; padding:3px 0; opacity:0.8">
+                                    <span>${item.name}</span>
+                                    <span>${mi.buyPrice}</span>
+                                    <span>${mi.sellPrice}</span>
+                                    <span>${mi.stock}</span>
+                                    <span></span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            });
+        });
+        
+        DOM.browserList.innerHTML = html;
     }
 
     function renderMissionBoard(missions, currentStation) {
@@ -1580,6 +2053,71 @@
             });
         }
     }
+
+    function renderUpgradeBoard() {
+        const p = game.player;
+        let html = '';
+        
+        const types = [
+            { id: 'engine', name: 'PROPULSION SYSTEM' },
+            { id: 'hull', name: 'STRUCTURAL INTEGRITY' },
+            { id: 'fuel', name: 'FUEL CAPACITY' },
+            { id: 'cargo', name: 'CARGO HOLD' }
+        ];
+        
+        types.forEach(type => {
+            const currentLevel = p.upgrades[type.id];
+            const nextLevel = currentLevel + 1;
+            const config = UPGRADES_CONFIG[type.id];
+            const currentInfo = config[currentLevel];
+            const nextInfo = config[nextLevel];
+            
+            const isMaxed = nextLevel >= config.length;
+            
+            html += `
+                <div class="upgrade-card ${isMaxed ? 'maxed' : ''}">
+                    <div class="upgrade-info">
+                        <div class="upgrade-name">${type.name}: ${currentInfo.name}</div>
+                        <div class="upgrade-desc">${isMaxed ? 'MAX LEVEL REACHED' : 'Next: ' + nextInfo.name + ' - ' + nextInfo.desc}</div>
+                    </div>
+                    ${isMaxed 
+                        ? '<button class="upgrade-buy maxed" disabled>MAXED</button>'
+                        : `<button class="upgrade-buy" 
+                                   ${p.credits < nextInfo.cost ? 'disabled' : ''} 
+                                   onclick="buyUpgrade('${type.id}', ${nextLevel})">
+                                BUY: ${nextInfo.cost} CR
+                           </button>`
+                    }
+                </div>
+            `;
+        });
+        
+        DOM.upgradeList.innerHTML = html;
+    }
+
+    function buyUpgrade(type, level) {
+        const info = UPGRADES_CONFIG[type][level];
+        if (game.player.credits >= info.cost) {
+            game.player.credits -= info.cost;
+            game.player.upgrades[type] = level;
+            
+            // Apply hull/fuel increase if needed
+            if (type === 'hull') game.player.hull = getMaxHull();
+            if (type === 'fuel') game.player.fuel = getMaxFuel();
+            
+            showStatus('SHIP UPGRADED: ' + info.name);
+            
+            // Update menu
+            DOM.menuCredits.textContent = game.player.credits + ' CR';
+            DOM.menuFuel.textContent = Math.round(game.player.fuel / getMaxFuel() * 100) + '%';
+            DOM.menuHull.textContent = Math.round(game.player.hull / getMaxHull() * 100) + '%';
+            
+            renderUpgradeBoard();
+        }
+    }
+
+    // Expose buyUpgrade to global scope for onclick
+    window.buyUpgrade = buyUpgrade;
 
     function acceptMission(mission) {
         if (game.mission) return;
@@ -1619,13 +2157,15 @@
         // Regenerate mission board
         const missions = generateMissionsForStation(game.player.dockedStation);
         renderMissionBoard(missions, game.player.dockedStation);
+        renderUpgradeBoard(); // Credits might have changed
     }
 
     // Service buttons
     DOM.refuelBtn.addEventListener('click', () => {
-        if (game.player.credits >= CONFIG.REFUEL_COST && game.player.fuel < 100) {
+        const maxFuel = getMaxFuel();
+        if (game.player.credits >= CONFIG.REFUEL_COST && game.player.fuel < maxFuel) {
             game.player.credits -= CONFIG.REFUEL_COST;
-            game.player.fuel = 100;
+            game.player.fuel = maxFuel;
             DOM.menuCredits.textContent = game.player.credits + ' CR';
             DOM.menuFuel.textContent = '100%';
             DOM.refuelBtn.disabled = true;
@@ -1635,9 +2175,10 @@
     });
 
     DOM.repairBtn.addEventListener('click', () => {
-        if (game.player.credits >= CONFIG.REPAIR_COST && game.player.hull < 100) {
+        const maxHull = getMaxHull();
+        if (game.player.credits >= CONFIG.REPAIR_COST && game.player.hull < maxHull) {
             game.player.credits -= CONFIG.REPAIR_COST;
-            game.player.hull = 100;
+            game.player.hull = maxHull;
             DOM.menuCredits.textContent = game.player.credits + ' CR';
             DOM.menuHull.textContent = '100%';
             DOM.repairBtn.disabled = true;
@@ -1648,6 +2189,12 @@
 
     DOM.undockBtn.addEventListener('click', undock);
     DOM.completeMissionBtn.addEventListener('click', completeMission);
+
+    // Tab buttons
+    DOM.missionTabBtn.addEventListener('click', () => switchTab('mission'));
+    DOM.marketTabBtn.addEventListener('click', () => switchTab('market'));
+    DOM.browserTabBtn.addEventListener('click', () => switchTab('browser'));
+    DOM.upgradeTabBtn.addEventListener('click', () => switchTab('upgrade'));
 
     // ============================================
     // CAMERA UPDATE
@@ -1996,19 +2543,21 @@
         
         // Basic stats
         DOM.hudCredits.textContent = p.credits + ' CR';
-        DOM.hudHull.textContent = Math.round(p.hull) + '%';
+        DOM.hudHull.textContent = Math.round(p.hull / getMaxHull() * 100) + '%';
         DOM.hudSystem.textContent = game.systems[game.currentSystemIndex].name;
-        DOM.hudFuel.textContent = Math.round(p.fuel) + '%';
+        DOM.hudFuel.textContent = Math.round(p.fuel / getMaxFuel() * 100) + '%';
         DOM.hudSpeed.textContent = Math.round(p.speed);
         DOM.hudPos.textContent = Math.round(p.x / 100) + ', ' + Math.round(p.y / 100);
         
         // Hull color
+        const hullPercent = p.hull / getMaxHull() * 100;
         DOM.hudHull.className = 'hud-value' + 
-            (p.hull < 30 ? ' danger' : p.hull < 60 ? ' warning' : '');
+            (hullPercent < 30 ? ' danger' : hullPercent < 60 ? ' warning' : '');
         
         // Fuel color
+        const fuelPercent = p.fuel / getMaxFuel() * 100;
         DOM.hudFuel.className = 'hud-value' + 
-            (p.fuel < 20 ? ' danger' : p.fuel < 40 ? ' warning' : '');
+            (fuelPercent < 20 ? ' danger' : fuelPercent < 40 ? ' warning' : '');
         
         // Speed color
         DOM.hudSpeed.className = 'hud-value' + 
@@ -2093,6 +2642,10 @@
                 game.player.y = game.stations[0].y;
             }
         }
+        
+        // Update stats from initial upgrades
+        game.player.hull = getMaxHull();
+        game.player.fuel = getMaxFuel();
         
         showStatus('SPACE COURIER - Press J to open Hyperjump menu!', 3000);
         
