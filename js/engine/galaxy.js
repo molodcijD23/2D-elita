@@ -1,5 +1,6 @@
 import { G } from '../state.js';
 import { Utils } from '../utils.js';
+import { Asteroid } from '../entities/asteroid.js';
 
 export const Galaxy = {
     generateGalaxy() {
@@ -25,8 +26,15 @@ export const Galaxy = {
                 planets: [],
                 stations: [],
                 stars: [],
-                missions: []
+                missions: [],
+                asteroids: []
             };
+
+            // Asteroids
+            let aCount = 5 + Math.floor(Utils.seededRandom(seed++) * 10);
+            for (let i = 0; i < aCount; i++) {
+                content.asteroids.push(Asteroid.create());
+            }
 
             // Planets
             let pCount = 2 + Math.floor(Utils.seededRandom(seed++) * 4);

@@ -49,24 +49,36 @@ export class Ship {
 
         // Ship Body
         ctx.beginPath();
-        ctx.moveTo(15, 0);
-        ctx.lineTo(-10, 10);
-        ctx.lineTo(-10, -10);
+        ctx.moveTo(20, 0);
+        ctx.lineTo(-15, 12);
+        ctx.lineTo(-10, 0);
+        ctx.lineTo(-15, -12);
         ctx.closePath();
-        ctx.strokeStyle = '#00ffcc';
+        ctx.fillStyle = '#333';
+        ctx.fill();
+        ctx.strokeStyle = '#000';
         ctx.lineWidth = 2;
         ctx.stroke();
+
+        // Cockpit
+        ctx.beginPath();
+        ctx.arc(10, 0, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#aaddff';
+        ctx.fill();
+
 
         // --- Visual Effects (Thrusters) ---
         
         // Main Engine (Back)
         if (G.input.w && G.state === 'FLYING' && G.ship.fuel > 0) {
             ctx.beginPath();
-            ctx.moveTo(-10, 0);
-            ctx.lineTo(-25, 0);
-            ctx.strokeStyle = '#ff6600';
-            ctx.lineWidth = 3;
-            ctx.stroke();
+            ctx.moveTo(-15, 8);
+            ctx.lineTo(-25, 4);
+            ctx.lineTo(-25, -4);
+            ctx.lineTo(-15, -8);
+            ctx.closePath();
+            ctx.fillStyle = '#f9a825';
+            ctx.fill();
         }
 
         // Reverse Thrusters (Front/Sides)
@@ -78,7 +90,7 @@ export class Ship {
             // Right Reverse
             ctx.moveTo(8, -8);
             ctx.lineTo(15, -12);
-            ctx.strokeStyle = '#00ccff'; // Blueish for cold gas/reverse thrusters
+            ctx.strokeStyle = '#81d4fa'; // Blueish for cold gas/reverse thrusters
             ctx.lineWidth = 2;
             ctx.stroke();
         }

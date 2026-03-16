@@ -4,6 +4,7 @@ import { UI } from './ui.js';
 import { Utils } from './utils.js';
 import { Galaxy } from './engine/galaxy.js';
 import { Ship } from './entities/ship.js';
+import { Asteroid } from './entities/asteroid.js';
 
 function init() {
     G.canvas = document.getElementById('gameCanvas');
@@ -64,6 +65,15 @@ function update() {
 
     if (G.state === 'FLYING') {
         Ship.update();
+
+        // Update Asteroids
+        G.currentSystem.content.asteroids.forEach(a => {
+            Asteroid.update(a);
+            if (Utils.dist(G.ship.x, G.ship.y, a.x, a.y) < a.r + 10) {
+                G.ship.hull -= 5;
+                Utils.notify("HULL DAMAGE!", "red");
+            }
+        });
 
         // Check Docking
         G.currentSystem.content.stations.forEach(s => {
@@ -133,35 +143,88 @@ function draw() {
     }
 
     ctx.save();
+    
+    // Parallax background
+    const layers = [
+        { speed: 0.2, color: '#111', size: 1 },
+        { speed: 0.5, color: '#333', size: 2 },
+        { speed: 0.8, color: '#555', size: 2.5 }
+    ];
+    
+    layers.forEach(layer => {
+        ctx.fillStyle = layer.color;
+        const parallaxX = G.ship.x * layer.speed;
+        const parallaxY = G.ship.y * layer.speed;
+        
+        ctx.save();
+        ctx.translate(-parallaxX, -parallaxY);
+        
+        G.currentSystem.content.stars.forEach(s => {
+            ctx.fillRect(s.x, s.y, layer.size, layer.size);
+        });
+        
+        ctx.restore();
+    });
+
     ctx.translate(G.width/2 - G.ship.x, G.height/2 - G.ship.y);
 
     const c = G.currentSystem.content;
-    ctx.fillStyle = '#fff';
-    c.stars.forEach(s => ctx.fillRect(s.x, s.y, s.s, s.s));
 
     // Sun
-    ctx.beginPath(); ctx.arc(0,0, c.sun.r, 0, Math.PI*2);
-    ctx.fillStyle = c.sun.color; ctx.shadowBlur = 50; ctx.shadowColor = c.sun.color; ctx.fill(); ctx.shadowBlur = 0;
+    const grad = ctx.createRadialGradient(0, 0, c.sun.r * 0.5, 0, 0, c.sun.r * 1.5);
+    grad.addColorStop(0, 'rgba(255,255,255,0.8)');
+    grad.addColorStop(0.2, c.sun.color);
+    grad.addColorStop(1, 'rgba(255,165,0,0)');
+    
+    ctx.beginPath();
+    ctx.arc(0, 0, c.sun.r * 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
 
     // Planets
     c.planets.forEach(p => {
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-        ctx.fillStyle = p.color; ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.fillText(p.name, p.x-20, p.y-p.r-10);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+
+        // Rings
+        if (p.type === 'Icy') {
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(p.x, p.y, p.r * 1.5, p.r * 0.5, Math.PI / 4, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = '#000';
+        ctx.fillText(p.name, p.x-20, p.y-p.r-10);
     });
 
     // Stations
     c.stations.forEach(s => {
-        ctx.strokeStyle = '#f0f'; ctx.lineWidth = 3; ctx.strokeRect(s.x-25, s.y-25, 50, 50);
-        ctx.fillStyle = '#fff'; ctx.fillText(s.name, s.x-30, s.y-40);
+        ctx.strokeStyle = '#f0f';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(s.x-25, s.y-25, 50, 50);
+        ctx.fillStyle = '#000';
+        ctx.fillText(s.name, s.x-30, s.y-40);
+    });
+
+    // Asteroids
+    c.asteroids.forEach(a => {
+        Asteroid.draw(ctx, a);
     });
 
     // Laser
     if (G.input.space && G.ship.laser && G.state === 'FLYING') {
         c.planets.forEach(p => {
             if (Utils.dist(G.ship.x, G.ship.y, p.x, p.y) < p.r + 120) {
-                ctx.beginPath(); ctx.moveTo(G.ship.x, G.ship.y); ctx.lineTo(p.x, p.y);
-                ctx.strokeStyle = p.type === 'Icy' ? '#0cf' : '#fc0'; ctx.lineWidth = 4; ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(G.ship.x, G.ship.y);
+                ctx.lineTo(p.x, p.y);
+                ctx.strokeStyle = p.type === 'Icy' ? '#0cf' : '#fc0';
+                ctx.lineWidth = 4;
+                ctx.stroke();
             }
         });
     }
@@ -172,14 +235,21 @@ function draw() {
 
 function drawMinigame(ctx) {
     const cx = G.width/2, cy = G.height/2;
-    ctx.fillStyle = "rgba(0,0,0,0.9)"; ctx.fillRect(0,0, G.width, G.height);
-    ctx.fillStyle = "#fff"; ctx.font = "20px Courier New"; ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fillRect(0,0, G.width, G.height);
+    ctx.fillStyle = "#000";
+    ctx.font = "20px Arial";
+    ctx.textAlign = "center";
     ctx.fillText("HYPERSPACE CALIBRATION", cx, cy - 60);
-    const w = 400, h = 30; ctx.strokeStyle = "#fff"; ctx.strokeRect(cx - w/2, cy, w, h);
+    const w = 400, h = 30;
+    ctx.strokeStyle = "#000";
+    ctx.strokeRect(cx - w/2, cy, w, h);
     const zx = (G.jump.zoneStart / 100) * w, zw = (G.jump.zoneWidth / 100) * w;
-    ctx.fillStyle = "#0f0"; ctx.fillRect((cx - w/2) + zx, cy + 2, zw, h - 4);
+    ctx.fillStyle = "#0f0";
+    ctx.fillRect((cx - w/2) + zx, cy + 2, zw, h - 4);
     const curX = (G.jump.cursor / 100) * w;
-    ctx.fillStyle = "#f00"; ctx.fillRect((cx - w/2) + curX - 2, cy - 5, 4, h + 10);
+    ctx.fillStyle = "#f00";
+    ctx.fillRect((cx - w/2) + curX - 2, cy - 5, 4, h + 10);
 }
 
 window.onload = init;
