@@ -1514,10 +1514,14 @@
         return asteroids;
     }
 
-    function generateStationsForSystem(systemName, systemIndex) {        const stationPrefixes = ['ALPHA', 'BETA', 'GAMMA', 'DELTA', 'EPSILON'];
+    function generateStationsForSystem(systemName, systemIndex) {
+        const stationPrefixes = ['ALPHA', 'BETA', 'GAMMA', 'DELTA', 'EPSILON'];
         const margin = 5000;
         const w = CONFIG.WORLD_WIDTH;
         const h = CONFIG.WORLD_HEIGHT;
+        const centerX = w / 2;
+        const centerY = h / 2;
+        const minSafeDistance = 6000; // Star radius is 2500, plus some buffer
         
         // Different layouts per system
         const layouts = [
@@ -1537,13 +1541,24 @@
         const stations = [];
         for (let i = 0; i < Math.min(stationCount, layout.length); i++) {
             const pos = layout[i];
+            let x = pos.x * w + random(-3000, 3000);
+            let y = pos.y * h + random(-3000, 3000);
+            
+            // Ensure the station is not too close to the sun (center of the system)
+            const dist = distance(x, y, centerX, centerY);
+            if (dist < minSafeDistance) {
+                const angle = (x === centerX && y === centerY) ? random(0, Math.PI * 2) : Math.atan2(y - centerY, x - centerX);
+                x = centerX + Math.cos(angle) * minSafeDistance;
+                y = centerY + Math.sin(angle) * minSafeDistance;
+            }
+
             stations.push({
                 id: i,
                 systemId: systemIndex,
                 name: stationPrefixes[i] + ' ' + systemName.split(' ')[0],
-                x: pos.x * w + random(-3000, 3000),
-                y: pos.y * h + random(-3000, 3000),
-                color: ['#f0f', '#0ff', '#ff0', '#0f0', '#f80'][i],
+                x: x,
+                y: y,
+                color: ['#eee', '#ccc', '#bbb', '#aaa', '#999'][i % 5],
                 market: generateMarketForStation(systemIndex, i)
             });
         }
@@ -2015,12 +2030,25 @@
     function gameOver() {
         showStatus('💀 SHIP DESTROYED - Resetting...', 3000);
         setTimeout(() => {
-            game.player.x = CONFIG.WORLD_WIDTH / 2;
-            game.player.y = CONFIG.WORLD_HEIGHT / 2;
+            // Respawn at the first station of the system to avoid the sun
+            if (game.stations.length > 0) {
+                game.player.x = game.stations[0].x + 300;
+                game.player.y = game.stations[0].y;
+            } else {
+                // Fallback if no stations exist
+                game.player.x = CONFIG.WORLD_WIDTH * 0.1;
+                game.player.y = CONFIG.WORLD_HEIGHT * 0.1;
+            }
+            
             game.player.speed = 0;
+            game.player.angle = -Math.PI / 2;
             game.player.hull = getMaxHull();
-            game.player.credits = CONFIG.STARTING_CREDITS;
+            game.player.fuel = getMaxFuel();
+            game.player.isDocked = false;
+            game.player.dockedStation = null;
             game.mission = null;
+            
+            showStatus('NEW SHIP ISSUED', 2000);
         }, 3000);
     }
 
